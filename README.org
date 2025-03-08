@@ -1,4 +1,5 @@
 #+TITLE: Emacs configuration
+#+PROPERTY: header-args:emacs-lisp :tangle yes
 
 * Saner defaults
 
@@ -48,10 +49,32 @@
   (setq read-extended-command-predicate #'command-completion-default-include-p))
 #+end_src
 
+* Font
+
+Define my preferred fixed pitch and variable pitch fonts.
+
+"JBMono Nerd Font" is a customised build of JetBrainsMono Nerd Font with some font features enabled, as Emacs doesn't seem to have the ability to enable it by itself.
+
+#+BEGIN_SRC emacs-lisp
+  (set-face-attribute 'default nil :font "JBMono Nerd Font" :height 130)
+  (set-fontset-font t nil (font-spec :size 20 :name "JBMono Nerd Font"))
+  (setq-default line-spacing 0.2)
+  (custom-theme-set-faces
+   'user
+   '(variable-pitch ((t (:family "SF Pro Display" :height 130))))
+   '(fixed-pitch ((t ( :family "JBMono Nerd Font" :height 130)))))
+#+END_SRC
+
+Scale the variable pitch font to match the fixed pitch font. Otherwise, it looks slightly smaller.
+
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'face-font-rescale-alist '("SF Pro Display" . 1.2))
+#+END_SRC
+
 * Theme
 
 #+begin_src emacs-lisp
-(load-theme 'no-clown-fiesta t)
+(load-theme 'modus-vivendi t)
 #+end_src
 
 * Evil mode
