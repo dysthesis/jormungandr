@@ -1,6 +1,18 @@
 #+TITLE: Emacs configuration
 #+PROPERTY: header-args:emacs-lisp :tangle yes
 
+* Use-package
+
+#+begin_src emacs-lisp
+(require 'use-package)
+(setq use-package-always-ensure t)
+(use-package no-littering)
+(eval-and-compile
+  (setq no-littering-etc-directory "~/.cache/emacs/etc")
+  (setq no-littering-var-directory "~/.cache/emacs/var")
+  (require 'no-littering))
+#+end_src
+
 * Saner defaults
 
 #+begin_src emacs-lisp
@@ -8,13 +20,13 @@
   :demand t
   :ensure nil
   :init
-	(menu-bar-mode -1)
+  (menu-bar-mode -1)
   (tool-bar-mode -1)
   (setq use-short-answers t)
   (setq ring-bell-function 'ignore)
   (setq-default indent-tabs-mode nil)
-  (setq-default fill-column 80) 
-	(setq pixel-scroll-precision-large-scroll-height 40.0)
+  (setq-default fill-column 80)
+  (setq pixel-scroll-precision-large-scroll-height 40.0)
   (setq pixel-scroll-precision-mode 1)
   (setq enable-recursive-minibuffers t)
   (setq backup-by-copying t)
@@ -61,13 +73,13 @@ Define my preferred fixed pitch and variable pitch fonts.
 "JBMono Nerd Font" is a customised build of JetBrainsMono Nerd Font with some font features enabled, as Emacs doesn't seem to have the ability to enable it by itself.
 
 #+BEGIN_SRC emacs-lisp
-  (set-face-attribute 'default nil :font "JBMono Nerd Font" :height 90)
-  (set-fontset-font t nil (font-spec :size 9 :name "JBMono Nerd Font"))
+  (set-face-attribute 'default nil :font "JBMono Nerd Font" :height 130)
+  (set-fontset-font t nil (font-spec :size 20 :name "JBMono Nerd Font"))
   (setq-default line-spacing 0.2)
   (custom-theme-set-faces
    'user
-   '(variable-pitch ((t (:family "SF Pro Display" :height 90))))
-   '(fixed-pitch ((t ( :family "JBMono Nerd Font" :height 90)))))
+   '(variable-pitch ((t (:family "SF Pro Display" :height 130))))
+   '(fixed-pitch ((t ( :family "JBMono Nerd Font" :height 130)))))
 #+END_SRC
 
 Scale the variable pitch font to match the fixed pitch font. Otherwise, it looks slightly smaller.

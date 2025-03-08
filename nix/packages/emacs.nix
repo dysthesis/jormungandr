@@ -2,6 +2,7 @@
   emacs-unstable,
   emacsWithPackagesFromUsePackage,
   runCommand,
+  writeText,
 }: let
   emacs = emacs-unstable;
   config =
@@ -17,7 +18,7 @@
        -f org-babel-tangle
 
 
-      echo "(add-to-list 'custom-theme-load-path "${../../themes}")" > $out
+      echo "(add-to-list 'custom-theme-load-path \"${../../themes}\")" > $out
       cat init.el >> $out
     '';
   # config =
@@ -30,8 +31,11 @@
   #     (org-babel-load-file "${../../README.org}")
   #   '';
 in
+  builtins.trace "${config}"
   emacsWithPackagesFromUsePackage {
     inherit config;
     package = emacs;
     alwaysEnsure = true;
+    alwaysTangle = true;
+    defaultInitFile = true;
   }
