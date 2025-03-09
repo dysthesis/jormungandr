@@ -2,39 +2,36 @@
   emacs-unstable,
   emacsWithPackagesFromUsePackage,
   runCommand,
-  writeText,
 }: let
-  emacs = emacs-unstable;
-  config =
+  package = emacs-unstable;
+  cfg =
     runCommand "init.el" {
-      buildInputs = [emacs];
+      buildInputs = [package];
       src = ../../README.org;
-      resultIsFile = true;
     } ''
-         # Tangle the Org file using Emacs in batch mode.
+      # Tangle the Org file using Emacs in batch mode.
       cp $src init.org
       emacs --batch \
        -l org init.org \
        -f org-babel-tangle
 
 
-      echo "(add-to-list 'custom-theme-load-path \"${../../themes}\")" > $out
-      cat init.el >> $out
+      mkdir -p $out
+      mkdir -p $out/eln-cache
+      echo "(setq native-comp-eln-load-path (list \"$out/eln-cache\"))" >> $out/init.el
+      echo "(add-to-list 'custom-theme-load-path \"${../../themes}\")" >> $out/init.el
+      cat init.el >> $out/init.el
+
+
+      emacs --batch \
+        --eval "(setq native-comp-eln-load-path (list \"$out/eln-cache\"))" \
+        --eval "(native-compile \"$out/init.el\")"
     '';
-  # config =
-  #   writeText "init.el"
-  #   /*
-  #   emacs-lisp
-  #   */
-  #   ''
-  #     (add-to-list 'custom-theme-load-path "${../../themes}")
-  #     (org-babel-load-file "${../../README.org}")
-  #   '';
 in
-  builtins.trace "${config}"
+  builtins.trace "${cfg}"
   emacsWithPackagesFromUsePackage {
-    inherit config;
-    package = emacs;
+    config = "${cfg}/init.el";
+    inherit package;
     alwaysEnsure = true;
     alwaysTangle = true;
     defaultInitFile = true;
