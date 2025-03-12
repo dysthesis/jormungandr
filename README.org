@@ -228,35 +228,6 @@ This is similar to =leap.nvim= or =flash.nvim=; it allows for jumping to a certa
             (alist-get ?K avy-dispatch-alist) 'dysthesis/avy-action-kill-whole-line)) ;; kill lines with avy
 #+END_SRC
 
-** COMMENT Embark
-
-#+begin_quote
-Embark makes it easy to choose a command to run based on what is near point, both during a minibuffer completion session (in a way familiar to Helm or Counsel users) and in normal buffers. Bind the command embark-act to a key and it acts like prefix-key for a keymap of actions (commands) relevant to the target around point. 
-#+end_quote
-
-#+begin_src emacs-lisp
-  (use-package embark
-    :ensure (:host github
-  		 :repo "oantolin/embark")
-    :after minibuffer
-    :hook ((embark-collect-mode . hl-line-mode)))
-  (use-package embark-consult
-    :ensure (:host github :repo "oantolin/embark"
-               :files ("embark-consult.el"))
-    :after (embark consult)
-    :demand
-    :bind (:map embark-become-file+buffer-map
-           ("m" . consult-bookmark)
-           ("b" . consult-buffer)
-           ("j" . consult-find)
-           :map embark-consult-search-map
-           ("f". consult-fd))
-    :config
-    (add-to-list
-     'embark-exporters-alist
-     '(consult-flymake-error . embark-export-flymake)))
-#+end_src
-
 * Saner defaults
 
 Some of the Emacs defaults aren't great.
@@ -315,19 +286,19 @@ Define my preferred fixed pitch and variable pitch fonts.
 "JBMono Nerd Font" is a customised build of JetBrainsMono Nerd Font with some font features enabled, as Emacs doesn't seem to have the ability to enable it by itself.
 
 #+BEGIN_SRC emacs-lisp
-  (set-face-attribute 'default nil :font "JBMono Nerd Font" :height 90)
-  (set-fontset-font t nil (font-spec :size 20 :name "JBMono Nerd Font"))
+  (set-face-attribute 'default nil :font "JBMono Nerd Font" :height 100)
+  (set-fontset-font t nil (font-spec :size 10 :name "JBMono Nerd Font"))
   (setq-default line-spacing 0.2)
   (custom-theme-set-faces
    'user
-   '(variable-pitch ((t (:family "SF Pro Display" :height 90))))
-   '(fixed-pitch ((t ( :family "JBMono Nerd Font" :height 90)))))
+   '(variable-pitch ((t (:family "SF Pro Display" :height 100))))
+   '(fixed-pitch ((t ( :family "JBMono Nerd Font" :height 100)))))
 #+END_SRC
 
 Scale the variable pitch font to match the fixed pitch font. Otherwise, it looks slightly smaller.
 
 #+BEGIN_SRC emacs-lisp
-  ;; (add-to-list 'face-font-rescale-alist '("SF Pro Display" . 1.2))
+ (add-to-list 'face-font-rescale-alist '("SF Pro Display" . 1.2))
 #+END_SRC
 
 ** Remove default UI elements
@@ -1332,7 +1303,7 @@ Easily browse the Git history of files.
 
 * Org-mode
 
-#+BEGIN_SRC emacs-lisp :noweb yes :tangle eys
+#+BEGIN_SRC emacs-lisp :noweb yes :tangle yes
   (use-package org
     :ensure nil
     :after citar
