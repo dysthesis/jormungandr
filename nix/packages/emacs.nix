@@ -19,7 +19,9 @@
 
       mkdir -p $out
       mkdir -p $out/eln-cache
-      echo "(setq native-comp-eln-load-path (list \"$out/eln-cache\"))" >> $out/init.el
+      # echo "(setq native-comp-eln-load-path (list \"$out/eln-cache\"))" >> $out/init.el
+      echo "(add-to-list 'native-comp-eln-load-path \"$out/eln-cache\")" >> $out/init.el
+      echo "(add-to-list 'native-comp-eln-load-path \"$emacs/share/emacs/native-lisp\")" >> $out/init.el
       cat $src >> $out/init.el
 
 
@@ -27,12 +29,13 @@
       	--eval "(setq native-comp-eln-load-path (list \"$out/eln-cache\"))" \
       	--eval "(native-compile \"$out/init.el\")"
     '';
-in
-  builtins.trace "${cfg}"
-  emacsWithPackagesFromUsePackage {
+  emacs = emacsWithPackagesFromUsePackage {
     config = "${cfg}/init.el";
     inherit package;
     alwaysEnsure = true;
     alwaysTangle = true;
     defaultInitFile = true;
-  }
+  };
+in
+  builtins.trace "${cfg}"
+  emacs
