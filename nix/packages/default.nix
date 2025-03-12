@@ -3,6 +3,6 @@
   lib,
   ...
 }: rec {
-  emacs = pkgs.callPackage ./emacs.nix {inherit lib;};
+  emacs = pkgs.callPackage ./emacs.nix {inherit lib pkgs;};
   default = emacs;
 }

@@ -3,39 +3,37 @@
   lib,
   emacs-unstable,
   emacsWithPackagesFromUsePackage,
-  runCommand,
 }: let
-  inherit (lib.babel.emacs) orgTangle;
-  package = emacs-unstable;
-  orgFile = ../../README.org;
-  initFile = orgTangle pkgs package orgFile "init.org";
+  inherit (lib.babel.pkgs) mkWrapper;
+  package = emacs-unstable.overrideAttrs (old: {
+    postInstall =
+      /*
+      bash
+      */
+      ''
+        ${old.postInstall or ""}
+        shopt -s globstar
+        ln -sf $out/share/emacs/native-lisp/*/* $out/lib/emacs/*/native-lisp/*/
+        shopt -u globstar
+      '';
+  });
 
-  cfg =
-    runCommand "init.el" {
-      buildInputs = [package];
-      src = "${initFile}/output.el";
-    } ''
+  config = ../../README.org;
 
-
-      mkdir -p $out
-      mkdir -p $out/eln-cache
-      # echo "(setq native-comp-eln-load-path (list \"$out/eln-cache\"))" >> $out/init.el
-      echo "(add-to-list 'native-comp-eln-load-path \"$out/eln-cache\")" >> $out/init.el
-      echo "(add-to-list 'native-comp-eln-load-path \"$emacs/share/emacs/native-lisp\")" >> $out/init.el
-      cat $src >> $out/init.el
-
-
-      emacs --batch \
-      	--eval "(setq native-comp-eln-load-path (list \"$out/eln-cache\"))" \
-      	--eval "(native-compile \"$out/init.el\")"
-    '';
-  emacs = emacsWithPackagesFromUsePackage {
-    config = "${cfg}/init.el";
-    inherit package;
+  wrapped-emacs = emacsWithPackagesFromUsePackage {
+    inherit package config;
     alwaysEnsure = true;
     alwaysTangle = true;
     defaultInitFile = true;
   };
 in
-  builtins.trace "${cfg}"
-  emacs
+  wrapped-emacs
+# mkWrapper pkgs wrapped-emacs
+# /*
+# bash
+# */
+# ''
+#   wrapProgram $out/bin/emacs \
+#    --prefix "EMACSNATIVELOADPATH" ":" "${package}/share/emacs/native-lisp/"
+# ''
+
