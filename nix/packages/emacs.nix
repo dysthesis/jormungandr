@@ -13,10 +13,8 @@
   cfg =
     runCommand "init.el" {
       buildInputs = [emacs-unstable];
-      src = "${initFile}/output.el";
+      src = "${initFile}/init.el";
     } ''
-
-
       mkdir -p $out
       mkdir -p $out/eln-cache
       # echo "(setq native-comp-eln-load-path (list \"$out/eln-cache\"))" >> $out/init.el
@@ -46,6 +44,7 @@
 
   config = "${cfg}/init.el";
 in
+  builtins.trace "init.el file is at ${config}"
   emacsWithPackagesFromUsePackage {
     inherit package config;
     alwaysEnsure = true;
