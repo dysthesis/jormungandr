@@ -970,6 +970,12 @@ Display a diff of the current file against =HEAD= in the gringe.
 
 * Org-mode
 
+*NOTE:* Issues currently exist with setting variables (primarily =org-directory=) with the following.
+
+It appears to be isolated; eliminating all other configurations but the current 'Org-mode' section does not alleviate this issue.
+
+It also does not seem to be specific to the =:custom= section, as attempts at configuring it via `=:config=` with =setq= results in the same outcome.
+
 #+BEGIN_SRC emacs-lisp :noweb yes :tangle init.el
   (use-package org
     :ensure nil
