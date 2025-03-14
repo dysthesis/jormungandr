@@ -17,10 +17,7 @@
     } ''
       mkdir -p $out
       mkdir -p $out/eln-cache
-      # echo "(setq native-comp-eln-load-path (list \"$out/eln-cache\"))" >> $out/init.el
-      echo "(add-to-list 'native-comp-eln-load-path \"$out/eln-cache\")" >> $out/init.el
-      echo "(add-to-list 'native-comp-eln-load-path \"$emacs/share/emacs/native-lisp\")" >> $out/init.el
-      cat $src >> $out/init.el
+      cp $src $out/init.el
 
 
       emacs --batch \
