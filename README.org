@@ -919,9 +919,12 @@ Display a diff of the current file against =HEAD= in the gringe.
     (rust-mode . (lambda () (setq indent-tabs-mode nil)))
     ;; prettify symbols
     (rust-mode . (lambda () (prettify-symbols-mode))))
-    (use-package cargo
-      :ensure t)
 #+END_SRC
+
+#+begin_src emacs-lisp
+  (use-package cargo
+    :ensure t)
+#+end_src
 
 ** Nix
 
@@ -938,9 +941,7 @@ Display a diff of the current file against =HEAD= in the gringe.
 #+BEGIN_SRC emacs-lisp
   (use-package citar
     :ensure t
-    :demand t
-    :custom
-    (citar-bibliography '("~/Documents/Org/Library.bib"))
+    :after (org)
     :hook
     ((org-mode LaTeX-mode) . citar-capf-setup)
     :general
@@ -972,12 +973,13 @@ Display a diff of the current file against =HEAD= in the gringe.
 #+BEGIN_SRC emacs-lisp :noweb yes :tangle init.el
   (use-package org
     :ensure nil
-    :after (citar)
+    :demand t
     :general
     ("C-c c" 'org-capture)
     ("S-RET" 'org-open-at-point)
     :custom
     (org-directory "~/Documents/Org/")
+    (citar-bibliography '((concat org-directory "Library.bib"))
     (org-archive-location (concat org-directory "archive.org::* From =%s="))
     (org-preview-latex-default-process 'dvisvgm)
     (org-highlight-latex-and-related '(latex script entities))
@@ -986,9 +988,7 @@ Display a diff of the current file against =HEAD= in the gringe.
     (org-cite-follow-processor 'citar)
     (org-cite-activate-processor 'citar)
     :config
-    (setq org-directory "~/Documents/Org/")
-    <<org-header-faces>>
-    <<org-latex-config>>)
+    <<org-latex-config>>))
 #+END_SRC
 
 ** Agenda
@@ -1879,18 +1879,6 @@ Use vterm because it is simple and fast, and does all I need.
 #+end_src
 
 * Miscellaneous
-** LuaLaTeX
-
-#+begin_src emacs-lisp
-  (setq TeX-engine 'luatex)
-#+end_src
-
-** Default shell
-
-#+begin_src emacs-lisp
-  (setq-default shell-file-name (executable-find "dash"))
-#+end_src
-
 ** Direnv
 
 #+begin_src emacs-lisp
@@ -1934,25 +1922,6 @@ Use vterm because it is simple and fast, and does all I need.
     (use-package evil
       :init
       (setq evil-undo-system 'undo-fu))
-#+END_SRC
-
-** Undo tree
-
-#+begin_src emacs-lisp
-  (use-package vundo
-    :ensure t
-    :custom (vundo-glyph-alist vundo-unicode-symbols))
-#+end_src
-
-** Custom =PATH=
-
-Tell Emacs where my binaries are.
-
-#+BEGIN_SRC emacs-lisp
-  (setenv "PATH" (concat "/home/demiurge/.nix-profile/bin:/home/demiurge/.local/bin:" (getenv "PATH")))
-  (setq exec-path (append '("/home/demiurge/.nix-profile/bin"
-  			  "/home/demiurge/.local/bin")
-  			exec-path))
 #+END_SRC
 
 ** Garbage Collector Magic Hack
