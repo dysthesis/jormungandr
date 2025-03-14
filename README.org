@@ -48,44 +48,7 @@ Use the built-in package manager.
 #+begin_src emacs-lisp
   (use-package emacs
     :demand t
-    :ensure nil
-    :after (general)
-    :general
-    (:states '(normal insert visual motion emacs)
-    	   :prefix "SPC"
-    	   :non-normal-prefix "C-SPC"
-    	   :keymaps 'override
-    	   "." '(find-file :wk "Find file"))
-    (:states '(normal insert visual motion emacs)
-    	   :prefix "SPC"
-    	   :non-normal-prefix "C-SPC"
-    	   :keymaps 'override
-  	   "TAB" '(comment-line :wk "Comment lines"))
-    (:states '(normal insert visual motion emacs)
-    	   :prefix "SPC"
-    	   :non-normal-prefix "C-SPC"
-    	   :keymaps 'override
-  	   "f r" '(consult-recent-file :wk "Recent files"))
-    (:states '(normal insert visual motion emacs)
-    	   :prefix "SPC"
-    	   :non-normal-prefix "C-SPC"
-    	   :keymaps 'override
-  	   "f f" '(consult-fd :wk "Fd search for files"))
-    (:states '(normal insert visual motion emacs)
-    	   :prefix "SPC"
-    	   :non-normal-prefix "C-SPC"
-    	   :keymaps 'override
-  	   "f g" '(consult-ripgrep :wk "Ripgrep search in files"))
-    (:states '(normal insert visual motion emacs)
-    	   :prefix "SPC"
-    	   :non-normal-prefix "C-SPC"
-    	   :keymaps 'override
-  	   "f l" '(consult-line :wk "Find line"))
-    (:states '(normal insert visual motion emacs)
-    	   :prefix "SPC"
-    	   :non-normal-prefix "C-SPC"
-    	   :keymaps 'override
-  	   "f i" '(consult-imenu :wk "Imenu buffer locations"))
+    :ensure nil 
     :init
     (setq inhibit-startup-message t)
     
@@ -161,13 +124,16 @@ Define my preferred fixed pitch and variable pitch fonts.
 "JBMono Nerd Font" is a customised build of JetBrainsMono Nerd Font with some font features enabled, as Emacs doesn't seem to have the ability to enable it by itself.
 
 #+BEGIN_SRC emacs-lisp
-  (set-face-attribute 'default nil :font "JBMono Nerd Font" :height 70)
-  (set-fontset-font t nil (font-spec :size 7 :name "JBMono Nerd Font"))
+
+(let ((my-font-height (if (string= (system-name) "deimos") 100 70))
+      (my-font-size   (if (string= (system-name) "deimos") 10 7)))
+  (set-face-attribute 'default nil :font "JBMono Nerd Font" :height my-font-height)
+  (set-fontset-font t nil (font-spec :size my-font-size :name "JBMono Nerd Font"))
   (setq-default line-spacing 0.2)
   (custom-theme-set-faces
    'user
-   '(variable-pitch ((t (:family "SF Pro Display" :height 70))))
-   '(fixed-pitch ((t ( :family "JBMono Nerd Font" :height 70)))))
+   `(variable-pitch ((t (:family "SF Pro Display" :height ,my-font-height))))
+   `(fixed-pitch ((t (:family "JBMono Nerd Font" :height ,my-font-height))))))
 #+END_SRC
 
 Scale the variable pitch font to match the fixed pitch font. Otherwise, it looks slightly smaller.
@@ -372,8 +338,18 @@ Vim-like modal editing
 #+begin_src emacs-lisp
   (use-package general
     :after (evil)
-    :config
-    (general-evil-setup))
+    (general-evil-setup)
+    (general-define-key
+     :states '(normal visual insert emacs)
+     :prefix "SPC"
+     :non-normal-prefix "C-SPC"
+     "." '(find-file :wk "Find file")
+     "TAB" '(comment-line :wk "Comment lines")
+     "f r" '(consult-recent-file :wk "Recent files")
+     "f g" '(consult-ripgrep :wk "Ripgrep search in files")
+     "f f" '(consult-fd :wk "Fd search for files")
+     "f l" '(consult-line :wk "Find line")
+     "f i" '(consult-imenu :wk "Imenu buffer locations")))
 #+end_src
 
 * Completion
@@ -956,12 +932,47 @@ Display a diff of the current file against =HEAD= in the gringe.
     :hook (nix-mode . eglot-ensure))
 #+END_SRC
 
+* Bibliography
+** Citar
+
+#+BEGIN_SRC emacs-lisp
+  (use-package citar
+    :ensure t
+    :demand t
+    :custom
+    (citar-bibliography '("~/Documents/Org/Library.bib"))
+    :hook
+    ((org-mode LaTeX-mode) . citar-capf-setup)
+    :general
+    ("C-c o" 'citar-open)
+    ("C-c b" 'org-cite-insert))
+
+  (defun my-citar-org-open-notes (key entry)
+    (let* ((bib (string-join (list my/bibtex-directory key ".bib")))
+           (org (string-join (list my/bibtex-directory key ".org")))
+           (new (not (file-exists-p org))))
+      (funcall citar-file-open-function org)
+      (when (and new (eq (buffer-size) 0))
+        (insert (format template
+                        (assoc-default "title" entry)
+                        user-full-name
+                        user-mail-address
+                        bib
+                        (with-temp-buffer
+                          (insert-file-contents bib)
+                          (buffer-string))))
+        (search-backward "|")
+        (delete-char 1))))
+
+  (setq-default citar-open-note-function 'my-citar-org-open-notes)
+#+END_SRC
+
 * Org-mode
 
 #+BEGIN_SRC emacs-lisp :noweb yes :tangle init.el
   (use-package org
     :ensure nil
-    :after citar
+    :after (citar)
     :general
     ("C-c c" 'org-capture)
     ("S-RET" 'org-open-at-point)
@@ -975,9 +986,9 @@ Display a diff of the current file against =HEAD= in the gringe.
     (org-cite-follow-processor 'citar)
     (org-cite-activate-processor 'citar)
     :config
+    (setq org-directory "~/Documents/Org/")
     <<org-header-faces>>
     <<org-latex-config>>)
-    (require 'org-indent)
 #+END_SRC
 
 ** Agenda
@@ -1147,41 +1158,11 @@ Combine the previously defined functions to process the entire inbox.
 (add-hook 'org-after-todo-state-change-hook #'log-todo-next-creation-date)
 #+end_src
 
-**** Keybinding
-Make it easier to perform agenda-related operations.
-
-First, we define some functions.
-#+begin_src emacs-lisp
-(defun dysthesis/org-inbox-capture ()
-  "Capture a task in agenda mode."
-  (interactive)
-  (org-capture nil "i"))
-(defun dysthesis/org-capture-todo ()
-  (interactive)
-  (org-capture nil "tt"))
-(defun dysthesis/org-capture-todo-with-deadline ()
-  (interactive)
-  (org-capture nil "td"))
-(defun dysthesis/org-capture-todo-with-schedule ()
-  (interactive)
-  (org-capture nil "ts"))
-#+end_src
-
-Then map them.
-#+begin_src emacs-lisp
-  (mapcar (lambda
-            (keymap)
-            (apply 'define-key org-mode-map (car keymap) (cadr keymap)))
-          '(("i" 'org-agenda-clock-in)
-           ("r" 'dysthesis/org-process-inbox)
-           ("R" 'org-agenda-refile)))
-#+end_src
-
 *** Org-super-agenda
 
 Better agenda views.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle init.el
   (use-package org-super-agenda
     :ensure t
     :after org-agenda
@@ -1253,7 +1234,7 @@ Better agenda views.
 
 ** Capture templates
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle init.el
     (use-package doct
       :ensure t
       :commands (doct)
@@ -1288,7 +1269,7 @@ Better agenda views.
 
 Taken from [[https://github.com/doomemacs/doomemacs/blob/311ad23fd410f976f66c40f98e26aa7ee2dda8c3/modules/lang/org/autoload/org.el#L151][Doom Emacs]].
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle init.el
   (defun +org/dwim-at-point (&optional arg)
     "Do-what-I-mean at point.
 
@@ -1389,7 +1370,7 @@ Taken from [[https://github.com/doomemacs/doomemacs/blob/311ad23fd410f976f66c40f
            (org-table-recalculate arg)
            (when (and (string-empty-p (string-trim (org-table-get-field)))
                       (bound-and-true-p evil-local-mode))
-           (evil-change-state 'insert)))
+             (evil-change-state 'insert)))
 
           (`babel-call
            (org-babel-lob-execute-maybe))
@@ -1429,47 +1410,67 @@ Taken from [[https://github.com/doomemacs/doomemacs/blob/311ad23fd410f976f66c40f
               (org-element-property :end context))))))))
 #+end_src
 
-** Org-modern
+** Evil mode intergration
+
+#+BEGIN_SRC emacs-lisp :tangle init.el
+  (use-package evil-org
+    :ensure t
+    :after org
+    :hook (org-mode . (lambda () evil-org-mode))
+    :config
+    (with-eval-after-load 'evil-org
+      (define-key org-mode-map (kbd "<normal-state> RET") '+org/dwim-at-point))
+    (require 'evil-org-agenda)
+    (evil-org-agenda-set-keys))
+#+END_SRC
+
+** Appearance
+*** Hide emphasis markers
+
+Show emphasis markers only when hovered over.
+
+#+BEGIN_SRC emacs-lisp
+(setq org-hide-emphasis-markers t)
+(use-package org-appear
+  :ensure t
+  :config ; add late to hook
+  (add-hook 'org-mode-hook 'org-appear-mode))
+#+end_src
+
+*** Org-modern
 :PROPERTIES:
 :header-args:emacs-lisp: :noweb yes
 :END:
 
 #+BEGIN_SRC emacs-lisp :tangle init.el
-    (use-package org-modern
-      :ensure t
-      :config
-      (menu-bar-mode -1)
-      (tool-bar-mode -1)
-      (scroll-bar-mode -1)
-      (org-indent-mode)
-      (dolist (face '(window-divider
-		      window-divider-first-pixel
-		      window-divider-last-pixel))
-	(face-spec-reset-face face)
-	(set-face-foreground face (face-attribute 'default :background)))
-      (set-face-background 'fringe (face-attribute 'default :background))
-      (setq org-hide-emphasis-markers t)
-      <<org-modern-list-bullets>>
-      <<org-modern-header-icons>>
-      <<org-modern-block-icons>>
-      (setq org-modern-block-fringe 6)
-      <<org-modern-agenda>>
-      <<org-ellipsis>>
-      (global-org-modern-mode)
-      (setq org-pretty-entities t))
+  (use-package org-modern
+    :ensure t
+    :config
+    (menu-bar-mode -1)
+    (tool-bar-mode -1)
+    (scroll-bar-mode -1)
+    (org-indent-mode)
+    (dolist (face '(window-divider
+  		      window-divider-first-pixel
+  		      window-divider-last-pixel))
+  	(face-spec-reset-face face)
+  	(set-face-foreground face (face-attribute 'default :background)))
+    (set-face-background 'fringe (face-attribute 'default :background))
+    (setq org-hide-emphasis-markers t)
+    <<org-modern-list-bullets>>
+    <<org-modern-header-icons>>
+    <<org-modern-block-icons>>
+    (setq org-modern-block-fringe 6)
+    <<org-modern-agenda>>
+    <<org-ellipsis>>
+    (global-org-modern-mode)
+    (setq org-pretty-entities t))
 #+END_SRC
 
 **** Folded header ellipses
 #+name:org-ellipsis
 #+BEGIN_SRC emacs-lisp
 (setq org-ellipsis " ↪")
-#+END_SRC
-
-**** Header icons
-
-#+NAME: org-modern-header-icons
-#+BEGIN_SRC emacs-lisp :tangle no
-;; (setq org-modern-fold-stars '((" 󰫈 " . " 󰫈 ") (" 󰫇 " . " 󰫇 ") (" 󰫆 " . " 󰫆 ") (" 󰫅 " . " 󰫅 ") (" 󰫄 " . " 󰫄 ") (" 󰫃 " . " 󰫃 ")))
 #+END_SRC
 
 **** List bullet icons
@@ -1497,7 +1498,7 @@ Taken from [[https://github.com/doomemacs/doomemacs/blob/311ad23fd410f976f66c40f
 **** Iconise keywords
 
 #+name:org-modern-keyword-icons
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (setq org-modern-keyword
 	'((t . t)
           ("title" . "𝙏 ")
@@ -1567,8 +1568,7 @@ Taken from [[https://github.com/doomemacs/doomemacs/blob/311ad23fd410f976f66c40f
            :foreground "#fab387")))
 #+END_SRC
 
-** Calendar highlighting
-
+*** Calendar highlighting
 
 Highlight each day in the calendar according to the number of tasks due that day.
 
@@ -1606,30 +1606,17 @@ Highlight each day in the calendar according to the number of tasks due that day
         )))
 #+END_SRC
 
-** Evil mode integration
-
-#+BEGIN_SRC emacs-lisp
-  (use-package evil-org
-    :ensure t
-    :after org
-    :hook (org-mode . (lambda () evil-org-mode))
-    :config
-    (with-eval-after-load 'evil-org
-      (define-key org-mode-map (kbd "<normal-state> RET") '+org/dwim-at-point))
-    (require 'evil-org-agenda)
-    (evil-org-agenda-set-keys))
-#+END_SRC
-
 ** Org-roam
 :PROPERTIES:
 :HEADER-ARGS:EMACS-LISP:  :noweb yes
 :END:
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle init.el
   (use-package org-roam
     :ensure t
+    :after (org)
     :custom
-    (org-roam-directory (file-truename "~/Documents/Org/Roam/"))
+    (org-roam-directory (file-truename (concat org-directory "Roam/")))
     (org-roam-complete-everywhere t)
     (org-roam-buffer-window-parameters '((no-delete-other-windows . t)))
     (org-roam-link-use-custom-faces 'everywhere)
@@ -1654,6 +1641,7 @@ Highlight each day in the calendar according to the number of tasks due that day
     ;; Dailies
     :config
     ;; If you're using a vertical completion framework, you might want a more informative completion interface
+    (setq org-roam-directory (file-truename (concat org-directory "Roam/")))
     (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
     (org-roam-db-autosync-mode)
     ;; If using org-roam-protocol
@@ -1710,7 +1698,7 @@ Highlight each day in the calendar according to the number of tasks due that day
 
 *** Citar integration
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle init.el
   (use-package citar-org-roam
     :ensure t
     :after (citar org-roam)
@@ -1739,7 +1727,7 @@ Highlight each day in the calendar according to the number of tasks due that day
 
 Add a creation date and maintain a last edited date for each Org-roam node.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle init.el
     (use-package org-roam-timestamps
       :ensure t
       :after org-roam
@@ -1778,7 +1766,7 @@ Add a creation date and maintain a last edited date for each Org-roam node.
 
 ** Org-ref
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle init.el
   (use-package org-ref
     :ensure t
     :config
@@ -1816,7 +1804,7 @@ Add a creation date and maintain a last edited date for each Org-roam node.
 
 ** Org-noter
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle init.el
   (use-package org-noter
     :ensure t
     :after (:any org pdf-view)
@@ -1829,6 +1817,7 @@ Add a creation date and maintain a last edited date for each Org-roam node.
      ;; Everything is relative to the main notes file
      org-noter-notes-search-path (list org-directory)))
 #+END_SRC
+
 ** Org-babel
 
 Org-babel is a literate programming module for Org-mode
@@ -1860,7 +1849,7 @@ Make the rendered preview's background transparent and foreground white
 
 Toggles the source code when a LaTeX fragment is under the cursor; otherwise, render the preview.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle init.el
     (use-package org-fragtog
       :ensure t
       :after org
@@ -1872,10 +1861,106 @@ Toggles the source code when a LaTeX fragment is under the cursor; otherwise, re
 
 Render previews forTikZ plots inside LaTeX fragments in Org files.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle init.el
   (add-to-list 'org-latex-packages-alist
                '("" "tikz" t))
 
   (eval-after-load "preview"
     '(add-to-list 'preview-default-preamble "\\PreviewEnvironment{tikzpicture}" t))
 #+END_SRC
+
+* Terminal emulation
+
+Use vterm because it is simple and fast, and does all I need.
+
+#+begin_src emacs-lisp
+  (use-package vterm
+    :ensure t)
+#+end_src
+
+* Miscellaneous
+** LuaLaTeX
+
+#+begin_src emacs-lisp
+  (setq TeX-engine 'luatex)
+#+end_src
+
+** Default shell
+
+#+begin_src emacs-lisp
+  (setq-default shell-file-name (executable-find "dash"))
+#+end_src
+
+** Direnv
+
+#+begin_src emacs-lisp
+  (use-package envrc
+    :ensure t
+    :hook (after-init-hook . envrc-global-mode))
+#+end_src
+
+** Async
+
+#+BEGIN_SRC emacs-lisp
+(use-package async
+  :ensure t
+  :config
+  (autoload 'dired-async-mode "dired-async.el" nil t)
+  (dired-async-mode 1))
+
+(use-package ob-async
+  :ensure t)
+#+END_SRC
+
+** Undo history
+
+#+BEGIN_SRC emacs-lisp
+  (use-package undo-fu
+    :ensure t
+    :config
+    (global-unset-key (kbd "C-z"))
+    (global-set-key (kbd "C-z")   'undo-fu-only-undo)
+    (global-set-key (kbd "C-S-z") 'undo-fu-only-redo))
+
+  (use-package undo-fu-session
+    :ensure t
+    :config
+    (undo-fu-session-global-mode))
+#+END_SRC
+
+*** Integrate with Evil Mode
+
+#+BEGIN_SRC emacs-lisp
+    (use-package evil
+      :init
+      (setq evil-undo-system 'undo-fu))
+#+END_SRC
+
+** Undo tree
+
+#+begin_src emacs-lisp
+  (use-package vundo
+    :ensure t
+    :custom (vundo-glyph-alist vundo-unicode-symbols))
+#+end_src
+
+** Custom =PATH=
+
+Tell Emacs where my binaries are.
+
+#+BEGIN_SRC emacs-lisp
+  (setenv "PATH" (concat "/home/demiurge/.nix-profile/bin:/home/demiurge/.local/bin:" (getenv "PATH")))
+  (setq exec-path (append '("/home/demiurge/.nix-profile/bin"
+  			  "/home/demiurge/.local/bin")
+  			exec-path))
+#+END_SRC
+
+** Garbage Collector Magic Hack
+
+This package optimises the garbage collector strategy for better performance.
+
+#+begin_src emacs-lisp
+  (use-package gcmh
+    :ensure t
+    :config (gcmh-mode 1))
+#+end_src

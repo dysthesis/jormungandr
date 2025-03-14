@@ -4,6 +4,7 @@
   emacs-unstable,
   emacsWithPackagesFromUsePackage,
   runCommand,
+  size ? 10,
 }: let
   inherit (lib.babel.pkgs) mkWrapper;
   inherit (lib.babel.emacs) orgTangle;
@@ -17,12 +18,12 @@
     } ''
       mkdir -p $out
       mkdir -p $out/eln-cache
-      cp $src $out/init.el
 
+      cat $src >> $out/init.el
 
       emacs --batch \
-      	--eval "(setq native-comp-eln-load-path (list \"$out/eln-cache\"))" \
-      	--eval "(native-compile \"$out/init.el\")"
+        --eval "(setq native-comp-eln-load-path (list \"$out/eln-cache\"))" \
+        --eval "(native-compile \"$out/init.el\")"
     '';
 
   package = emacs-unstable.overrideAttrs (old: {
