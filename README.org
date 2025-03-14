@@ -330,69 +330,52 @@ Vim-like modal editing
 #+end_src
 ** General
 
+=general.el= has an [[https://github.com/noctuid/general.el/issues/549][issue when used with Nix]].
+
 #+begin_src emacs-lisp
   (use-package general
+    :after (evil)
     :config
-    :after evil
     (general-evil-setup)
     ;; Set up 'SPC' as the leader key
-    (general-create-definer leader
-      :states '(normal insert visual motion emacs)
-      :keymaps 'override
-      :prefix "SPC"
-      :global-prefix "C-SPC")
-
-    (leader
-     "." '(find-file :wk "Find file")
-     "TAB" '(comment-line :wk "Comment lines")
-     "p" '(projectile-command-map :wk "Projectile command map"))
-
-    (leader
-     "f" '(:ignore t :wk "Find")
-     "f r" '(consult-recent-file :wk "Recent files")
-     "f f" '(consult-fd :wk "Fd search for files")
-     "f g" '(consult-ripgrep :wk "Ripgrep search in files")
-     "f l" '(consult-line :wk "Find line")
-     "f i" '(consult-imenu :wk "Imenu buffer locations"))
-
-    (leader
-     "b" '(:ignore t :wk "Buffer Bookmarks")
-     "b b" '(consult-buffer :wk "Switch buffer")
-     "b k" '(kill-this-buffer :wk "Kill this buffer")
-     "b i" '(ibuffer :wk "Ibuffer")
-     "b n" '(next-buffer :wk "Next buffer")
-     "b p" '(previous-buffer :wk "Previous buffer")
-     "b r" '(revert-buffer :wk "Reload buffer")
-     "b j" '(consult-bookmark :wk "Bookmark jump"))
-
-    (leader
-     "d" '(:ignore t :wk "Dired")
-     "d v" '(dired :wk "Open dired")
-     "d j" '(dired-jump :wk "Dired jump to current"))
-
-    (leader
-     "e" '(:ignore t :wk "Eglot Evaluate")
-     "e e" '(eglot-reconnect :wk "Eglot Reconnect")
-     "e f" '(eglot-format :wk "Eglot Format")
-     "e l" '(consult-flymake :wk "Consult Flymake")
-     "e b" '(eval-buffer :wk "Evaluate elisp in buffer")
-     "e r" '(eval-region :wk "Evaluate elisp in region"))
-
-    (leader
-     "g" '(:ignore t :wk "Git")
-     "g g" '(magit-status :wk "Magit status"))
-
-    (leader
-     "h" '(:ignore t :wk "Help") ;; To get more help use C-h commands (describe variable, function, etc.)
-     "h q" '(save-buffers-kill-emacs :wk "Quit Emacs and Daemon"))
-
-    (leader
-     "s" '(:ignore t :wk "Show")
-
-     (leader
-      "t" '(:ignore t :wk "Toggle")
-      "t t" '(visual-line-mode :wk "Toggle truncated lines (wrap)")
-      "t l" '(display-line-numbers-mode :wk "Toggle line numbers"))))
+    :general
+    (:states '(normal insert visual motion emacs)
+  	   :prefix "SPC"
+  	   :non-normal-prefix "C-SPC"
+  	   :keymaps 'override
+  	   "." '(find-file :wk "Find file")
+  	   "p" '(projectile-command-map :wk "Projectile command map")
+  	   "TAB" '(comment-line :wk "Comment lines")
+  	   "f" '(:ignore t :wk "Find")
+  	   "f r" '(consult-recent-file :wk "Recent files")
+  	   "f f" '(consult-fd :wk "Fd search for files")
+  	   "f g" '(consult-ripgrep :wk "Ripgrep search in files")
+  	   "f l" '(consult-line :wk "Find line")
+  	   "f i" '(consult-imenu :wk "Imenu buffer locations")
+  	   "b" '(:ignore t :wk "Buffer Bookmarks")
+  	   "b b" '(consult-buffer :wk "Switch buffer")
+  	   "b k" '(kill-this-buffer :wk "Kill this buffer")
+  	   "b i" '(ibuffer :wk "Ibuffer")
+  	   "b n" '(next-buffer :wk "Next buffer")
+  	   "b p" '(previous-buffer :wk "Previous buffer")
+  	   "b r" '(revert-buffer :wk "Reload buffer")
+  	   "b j" '(consult-bookmark :wk "Bookmark jump")
+  	   "d" '(:ignore t :wk "Dired")
+  	   "d v" '(dired :wk "Open dired")
+  	   "d j" '(dired-jump :wk "Dired jump to current")
+  	   "e" '(:ignore t :wk "Eglot Evaluate")
+  	   "e e" '(eglot-reconnect :wk "Eglot Reconnect")
+  	   "e f" '(eglot-format :wk "Eglot Format")
+  	   "e l" '(consult-flymake :wk "Consult Flymake")
+  	   "e b" '(eval-buffer :wk "Evaluate elisp in buffer")
+  	   "e r" '(eval-region :wk "Evaluate elisp in region")
+  	   "g" '(:ignore t :wk "Git")
+  	   "g g" '(magit-status :wk "Magit status")
+  	   "h q" '(save-buffers-kill-emacs :wk "Quit Emacs and Daemon")
+  	   "s" '(:ignore t :wk "Show")
+  	   "t" '(:ignore t :wk "Toggle")
+  	   "t t" '(visual-line-mode :wk "Toggle truncated lines (wrap)")
+  	   "t l" '(display-line-numbers-mode :wk "Toggle line numbers")))
 #+end_src
 
 * Completion

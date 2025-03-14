@@ -47,4 +47,7 @@ in
     alwaysEnsure = true;
     alwaysTangle = true;
     defaultInitFile = true;
+    extraEmacsPackages = epkgs: [
+      epkgs.use-package
+    ];
   }
