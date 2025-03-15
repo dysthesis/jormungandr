@@ -33,12 +33,7 @@ An easier way to define keybindings in Emacs.
      :prefix "SPC"
      :non-normal-prefix "C-SPC"
      "." '(find-file :wk "Find file")
-     "TAB" '(comment-line :wk "Comment lines")
-     "f r" '(consult-recent-file :wk "Recent files")
-     "f g" '(consult-ripgrep :wk "Ripgrep search in files")
-     "f f" '(consult-fd :wk "Fd search for files")
-     "f l" '(consult-line :wk "Find line")
-     "f i" '(consult-imenu :wk "Imenu buffer locations")))
+     "TAB" '(comment-line :wk "Comment lines")))
 #+END_SRC
 
 ** Evil mode
@@ -583,57 +578,65 @@ To use this,
 ** Consult
 
 #+BEGIN_SRC emacs-lisp
-(use-package consult
-  :ensure t
-  ;; Enable automatic preview at point in the *Completions* buffer. This is
-  ;; relevant when you use the default completion UI.
-  :hook (completion-list-mode . consult-preview-at-point-mode)
-  :init
-  ;; Optionally configure the register formatting. This improves the register
-  ;; preview for `consult-register', `consult-register-load',
-  ;; `consult-register-store' and the Emacs built-ins.
-  (setq register-preview-delay 0.5
-        register-preview-function #'consult-register-format)
+  (use-package consult
+    :ensure t
+    ;; Enable automatic preview at point in the *Completions* buffer. This is
+    ;; relevant when you use the default completion UI.
+    :hook (completion-list-mode . consult-preview-at-point-mode)
+    :init
+    (general-define-key
+     :states '(normal visual insert emacs)
+     :prefix "SPC"
+     :non-normal-prefix "C-SPC"
+     "f f" '(consult-fd :wk "Fd")
+     "f g" '(consult-ripgrep :wk "Ripgrep")
+     "f l" '(consult-line :wk "Find line")
+     "f i" '(consult-imenu "Imenu"))
+    ;; Optionally configure the register formatting. This improves the register
+    ;; preview for `consult-register', `consult-register-load',
+    ;; `consult-register-store' and the Emacs built-ins.
+    (setq register-preview-delay 0.5
+          register-preview-function #'consult-register-format)
 
-  ;; Optionally tweak the register preview window.
-  ;; This adds thin lines, sorting and hides the mode line of the window.
-  (advice-add #'register-preview :override #'consult-register-window)
+    ;; Optionally tweak the register preview window.
+    ;; This adds thin lines, sorting and hides the mode line of the window.
+    (advice-add #'register-preview :override #'consult-register-window)
 
-  ;; Use Consult to select xref locations with preview
-  (setq xref-show-xrefs-function #'consult-xref
-        xref-show-definitions-function #'consult-xref)
-  :config
-  ;; Optionally configure preview. The default value
-  ;; is 'any, such that any key triggers the preview.
-  ;; (setq consult-preview-key 'any)
-  ;; (setq consult-preview-key "M-.")
-  ;; (setq consult-preview-key '("S-<down>" "S-<up>"))
+    ;; Use Consult to select xref locations with preview
+    (setq xref-show-xrefs-function #'consult-xref
+          xref-show-definitions-function #'consult-xref)
+    :config
+    ;; Optionally configure preview. The default value
+    ;; is 'any, such that any key triggers the preview.
+    ;; (setq consult-preview-key 'any)
+    ;; (setq consult-preview-key "M-.")
+    ;; (setq consult-preview-key '("S-<down>" "S-<up>"))
 
-  ;; For some commands and buffer sources it is useful to configure the
-  ;; :preview-key on a per-command basis using the `consult-customize' macro.
-  ;; (consult-customize
-  ;; consult-theme :preview-key '(:debounce 0.2 any)
-  ;; consult-ripgrep consult-git-grep consult-grep
-  ;; consult-bookmark consult-recent-file consult-xref
-  ;; consult--source-bookmark consult--source-file-register
-  ;; consult--source-recent-file consult--source-project-recent-file
-  ;; :preview-key "M-."
-  ;; :preview-key '(:debounce 0.4 any))
+    ;; For some commands and buffer sources it is useful to configure the
+    ;; :preview-key on a per-command basis using the `consult-customize' macro.
+    ;; (consult-customize
+    ;; consult-theme :preview-key '(:debounce 0.2 any)
+    ;; consult-ripgrep consult-git-grep consult-grep
+    ;; consult-bookmark consult-recent-file consult-xref
+    ;; consult--source-bookmark consult--source-file-register
+    ;; consult--source-recent-file consult--source-project-recent-file
+    ;; :preview-key "M-."
+    ;; :preview-key '(:debounce 0.4 any))
 
-  ;; By default `consult-project-function' uses `project-root' from project.el.
-  ;; Optionally configure a different project root function.
-   ;;;; 1. project.el (the default)
-  ;; (setq consult-project-function #'consult--default-project--function)
-   ;;;; 2. vc.el (vc-root-dir)
-  ;; (setq consult-project-function (lambda (_) (vc-root-dir)))
-   ;;;; 3. locate-dominating-file
-  ;; (setq consult-project-function (lambda (_) (locate-dominating-file "." ".git")))
-   ;;;; 4. projectile.el (projectile-project-root)
-  (autoload 'projectile-project-root "projectile")
-  (setq consult-project-function (lambda (_) (projectile-project-root)))
-   ;;;; 5. No project support
-  ;; (setq consult-project-function nil)
-  )
+    ;; By default `consult-project-function' uses `project-root' from project.el.
+    ;; Optionally configure a different project root function.
+       ;;;; 1. project.el (the default)
+    ;; (setq consult-project-function #'consult--default-project--function)
+       ;;;; 2. vc.el (vc-root-dir)
+    ;; (setq consult-project-function (lambda (_) (vc-root-dir)))
+       ;;;; 3. locate-dominating-file
+    ;; (setq consult-project-function (lambda (_) (locate-dominating-file "." ".git")))
+       ;;;; 4. projectile.el (projectile-project-root)
+    (autoload 'projectile-project-root "projectile")
+    (setq consult-project-function (lambda (_) (projectile-project-root)))
+       ;;;; 5. No project support
+    ;; (setq consult-project-function nil)
+    )
 #+END_SRC
 
 ** Autopair
@@ -862,8 +865,13 @@ Check syntax on-the-fly when writing.
   (use-package projectile
     :ensure t
     :diminish projectile-mode
-    :config (projectile-mode)
-    :general ("p" '(projectile-command-map :wk "Projectile command map"))
+    :config
+    (general-define-key
+     :states '(normal visual insert emacs)
+     :prefix "SPC"
+     :non-normal-prefix "C-SPC"
+     "p" '(projectile-command-map :wk "+ Projectile"))
+    (projectile-mode)
     :init
     (when (file-directory-p "~/Documents/Projects")
       (setq projectile-project-search-path '("~/Documents/Projects" "~/Documents/University/")))
@@ -876,12 +884,17 @@ Check syntax on-the-fly when writing.
 A nice interface to interact with Git with.
 
 #+BEGIN_SRC emacs-lisp
-    (use-package transient
-      :ensure t)
-    (use-package magit
-      :ensure t
-      :after (transient)
-      :general ("SPC g g" 'magit))
+  (use-package transient
+    :ensure t)
+  (use-package magit
+    :ensure t
+    :after (transient)
+    :config
+    (general-define-key
+     :states '(normal visual insert emacs)
+     :prefix "SPC"
+     :non-normal-prefix "C-SPC"
+     "g g" '(magit :wk "Magit")))
 #+END_SRC
 
 ** Git gutter
@@ -1038,7 +1051,7 @@ Display a diff of the current file against =HEAD= in the gringe.
   (setq-default citar-open-note-function 'my-citar-org-open-notes)
 #+END_SRC
 
-* COMMENT EPUB reading
+* EPUB reading
 :PROPERTIES:
 :HEADER-ARGS:EMACS-LISP: :noweb yes
 :END:
@@ -1837,7 +1850,7 @@ Highlight each day in the calendar according to the number of tasks due that day
 
 *** Citar integration
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle init.el
   (use-package citar-org-roam
     :ensure t
     :after (citar org-roam)
@@ -1866,7 +1879,7 @@ Highlight each day in the calendar according to the number of tasks due that day
 
 Add a creation date and maintain a last edited date for each Org-roam node.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle init.el
     (use-package org-roam-timestamps
       :ensure t
       :after org-roam
@@ -1957,37 +1970,6 @@ Add a creation date and maintain a last edited date for each Org-roam node.
      org-noter-notes-search-path (list org-directory)))
 #+END_SRC
 
-** COMMENT Org-remark
-
-Annotation of PDFs, websites, etc.
-
-#+BEGIN_Src emacs-lisp
-  (use-package org-remark
-    :ensure t
-    :bind (;; :bind keyword also implicitly defers org-remark itself.
-           ;; Keybindings before :map is set for global-map.
-           ("C-c m m" . org-remark-mark)
-           ("C-c m l" . org-remark-mark-line)
-           :map org-remark-mode-map
-           ("C-c m o" . org-remark-open)
-           ("C-c m ]" . org-remark-view-next)
-           ("C-c m [" . org-remark-view-prev)
-           ("C-c m r" . org-remark-remove)
-           ("C-c m d" . org-remark-delete))
-    ;; Alternative way to enable `org-remark-global-tracking-mode' in
-    ;; `after-init-hook'.
-    ;; :hook (after-init . org-remark-global-tracking-mode)
-    :init
-    ;; It is recommended that `org-remark-global-tracking-mode' be
-    ;; enabled when Emacs initializes. Alternatively, you can put it to
-    ;; `after-init-hook' as in the comment above
-    (org-remark-global-tracking-mode +1)
-    :config
-    (use-package org-remark-info :after info :config (org-remark-info-mode +1))
-    (use-package org-remark-eww  :after eww  :config (org-remark-eww-mode +1))
-    (use-package org-remark-nov  :after nov  :config (org-remark-nov-mode +1)))
-#+END_SRC
-
 ** Org-babel
 
 Org-babel is a literate programming module for Org-mode
@@ -2049,19 +2031,6 @@ Use vterm because it is simple and fast, and does all I need.
 #+end_src
 
 * Miscellaneous
-** Consult
-
-#+begin_src emacs-lisp
-  (use-package consult
-    :demand t
-    :general
-    ;; ("SPC f r" 'consult-recent-file)
-    ("SPC f f" 'consult-fd)
-    ("SPC f g" 'consult-ripgrep)
-    ("SPC f l" 'consult-line)
-    ("SPC f i" 'consult-imenu))
-#+end_src
-
 ** Default shell
 
 #+begin_src emacs-lisp

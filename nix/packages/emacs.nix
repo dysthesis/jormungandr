@@ -47,7 +47,13 @@ in
     inherit package config;
     alwaysEnsure = true;
     defaultInitFile = true;
-    extraEmacsPackages = epkgs: with epkgs; [
-      use-package
-    ];
+    extraEmacsPackages = epkgs:
+      with epkgs; [
+        use-package
+        treesit-grammars.with-all-grammars
+        pkgs.unzip
+        pkgs.texliveFull
+        pkgs.ripgrep
+        pkgs.fd
+      ];
   }
