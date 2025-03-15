@@ -1,36 +1,10 @@
-
 #+TITLE: Emacs configuration
-#+STARTUP:fold
+#+STARTUP: fold
 #+PROPERTY: header-args:emacs-lisp :tangle init.el
 
-* Early initialisation
-:PROPERTY:
-:header-args:emacs-lisp: :tangle early-init.el
-:END:
-
-** Native compile
-
-Disable runtime compilation as everything will be compiled at build time via Nix.
-
-#+begin_src emacs-lisp :tangle early-init.el
-(eval-and-compile
-  (when (featurep 'nativecomp)
-    (setq comp-deferred-compilation nil)))
-#+end_src
-
-* Optimisations
-** Startup
-
-Make startup faster by reducing the frequency of garbage collection. This will be set back when startup finishes.
-#+begin_src emacs-lisp
-  ;; The default is 800 kilobytes. Measured in bytes.
-  ;; Make gc pauses faster by decreasing the threshold.
-  (setq gc-cons-threshold (* 2 1000 1000))
-  ;; Increase the amount of data which Emacs reads from the process
-  (setq read-process-output-max (* 1024 1024)) ;; 1mb
-#+end_src
 
 * Package manager
+** Package.el
 
 Use the built-in package manager.
 
@@ -41,33 +15,141 @@ Use the built-in package manager.
                            ("org" . "https://orgmode.org/elpa/")
                            ("elpa" . "https://elpa.gnu.org/packages/")
                            ("nongnu" . "https://elpa.nongnu.org/nongnu/"))) ;; For Eat Terminal
+  (package-initialize)
 #+end_src
 
-* Defaults
+* Navigation
+** General
 
-#+begin_src emacs-lisp
+An easier way to define keybindings in Emacs.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package general
+    :demand t
+    :config
+    (general-evil-setup)
+    (general-define-key
+     :states '(normal visual insert emacs)
+     :prefix "SPC"
+     :non-normal-prefix "C-SPC"
+     "." '(find-file :wk "Find file")
+     "TAB" '(comment-line :wk "Comment lines")
+     "f r" '(consult-recent-file :wk "Recent files")
+     "f g" '(consult-ripgrep :wk "Ripgrep search in files")
+     "f f" '(consult-fd :wk "Fd search for files")
+     "f l" '(consult-line :wk "Find line")
+     "f i" '(consult-imenu :wk "Imenu buffer locations")))
+#+END_SRC
+
+** Evil mode
+
+Enable Vim-like keybindings in Emacs.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package evil 
+    :ensure t
+    :init
+    (setq evil-respect-visual-line-mode t) ;; respect visual lines
+
+    (setq evil-search-module 'isearch) ;; use emacs' built-in search functionality.
+
+    (setq evil-want-C-u-scroll t) ;; allow scroll up with 'C-u'
+    (setq evil-want-C-d-scroll t) ;; allow scroll down with 'C-d'
+
+    (setq evil-want-integration t) ;; necessary for evil collection
+    (setq evil-want-keybinding nil)
+
+    (setq evil-split-window-below t) ;; split windows created below
+    (setq evil-vsplit-window-right t) ;; vertically split windows created to the right
+
+    (setq evil-want-C-i-jump nil) ;; hopefully this will fix weird tab behaviour
+
+    (setq evil-undo-system 'undo-redo) ;; undo via 'u', and redo the undone change via 'C-r'; only available in emacs 28+.
+    :config
+    (evil-mode 1))
+
+  (global-unset-key (kbd "C-j"))
+  (global-set-key (kbd "C-h") #'evil-window-left)
+  (global-set-key (kbd "C-j") #'evil-window-down)
+  (global-set-key (kbd "C-k") #'evil-window-up)
+  (global-set-key (kbd "C-l") #'evil-window-right)
+
+  (use-package evil-collection ;; evilifies a bunch of things
+    :ensure t
+    :after evil
+    :init
+    (setq evil-collection-outline-bind-tab-p t) ;; '<TAB>' cycles visibility in 'outline-minor-mode'
+    ;; If I want to incrementally enable evil-collection mode-by-mode, I can do something like the following:
+    ;; (setq evil-collection-mode-list nil) ;; I don't like surprises
+    ;; (add-to-list 'evil-collection-mode-list 'magit) ;; evilify magit
+    ;; (add-to-list 'evil-collection-mode-list '(pdf pdf-view)) ;; evilify pdf-view
+    :config
+    (evil-collection-init))
+
+  (use-package evil-commentary
+    :ensure t
+    :after evil
+    :config
+    (evil-commentary-mode)) ;; globally enable evil-commentary
+
+  (use-package evil-surround
+    :ensure t
+    :after evil
+    :config
+    (global-evil-surround-mode 1)) ;; globally enable evil-surround
+#+END_SRC
+
+** Avy
+
+This is similar to =leap.nvim= or =flash.nvim=; it allows for jumping to a certain character by typing that character, as well as an arbitrary number of the proceeding characters.
+
+#+BEGIN_SRC emacs-lisp
+    (use-package avy
+      :ensure t
+      :init
+      (defun dysthesis/avy-action-insert-newline (pt)
+        (save-excursion
+          (goto-char pt)
+          (newline))
+        (select-window
+         (cdr
+          (ring-ref avy-ring 0))))
+      (defun dysthesis/avy-action-kill-whole-line (pt)
+        (save-excursion
+          (goto-char pt)
+          (kill-whole-line))
+        (select-window
+         (cdr
+          (ring-ref avy-ring 0))))
+      (defun dysthesis/avy-action-embark (pt)
+        (unwind-protect
+            (save-excursion
+              (goto-char pt)
+              (embark-act))
+          (select-window
+           (cdr (ring-ref avy-ring 0))))
+        t) ;; adds an avy action for embark
+      :general
+      (general-def '(normal motion)
+        "s" 'evil-avy-goto-char-timer
+        "f" 'evil-avy-goto-char-in-line
+        "gl" 'evil-avy-goto-line ;; this rules
+        ";" 'avy-resume)
+      :config
+      (setf (alist-get ?. avy-dispatch-alist) 'dysthesis/avy-action-embark ;; embark integration
+            (alist-get ?i avy-dispatch-alist) 'dysthesis/avy-action-insert-newline
+            (alist-get ?K avy-dispatch-alist) 'dysthesis/avy-action-kill-whole-line)) ;; kill lines with avy
+#+END_SRC
+
+* Saner defaults
+
+Some of the Emacs defaults aren't great.
+
+#+begin_src emacs-lisp 
   (use-package emacs
     :demand t
-    :ensure nil 
+    :ensure nil
     :init
-    (setq inhibit-startup-message t)
-    
-    (scroll-bar-mode -1)        ; Disable visible scrollbar
-    (tool-bar-mode -1)          ; Disable the toolbar
-    (tooltip-mode -1)           ; Disable tooltips
-    (set-fringe-mode 10)        ; Give some breathing room
-    
-    (menu-bar-mode -1)            ; Disable the menu bar
-    (column-number-mode)
-    (global-display-line-numbers-mode 1)
-    (setq display-line-numbers-type 'relative)
-    (global-visual-line-mode t)
-    
-    ;; Disable line numbers for some modes
-    (dolist (mode '(org-mode-hook
-                    term-mode-hook
-                    eshell-mode-hook))
-      (add-hook mode (lambda () (display-line-numbers-mode 0))))
     (setq-default fill-column 80)
     (setq pixel-scroll-precision-large-scroll-height 40.0)
     (setq pixel-scroll-precision-mode 1)
@@ -107,33 +189,25 @@ Use the built-in package manager.
 
     ;; Hide commands in M-x which don't work in the current mode
     (setq read-extended-command-predicate #'command-completion-default-include-p))
-#+end_src
+#+END_SRC
 
 * Appearance
-** Theme
-
-#+begin_src emacs-lisp
-  (use-package doom-themes
-	  :config (load-theme 'doom-meltbus t))
-#+end_src
-
-** Fonts
+** Font
 
 Define my preferred fixed pitch and variable pitch fonts.
 
 "JBMono Nerd Font" is a customised build of JetBrainsMono Nerd Font with some font features enabled, as Emacs doesn't seem to have the ability to enable it by itself.
 
 #+BEGIN_SRC emacs-lisp
-
-(let ((my-font-height (if (string= (system-name) "deimos") 100 70))
-      (my-font-size   (if (string= (system-name) "deimos") 10 7)))
-  (set-face-attribute 'default nil :font "JBMono Nerd Font" :height my-font-height)
-  (set-fontset-font t nil (font-spec :size my-font-size :name "JBMono Nerd Font"))
-  (setq-default line-spacing 0.2)
-  (custom-theme-set-faces
-   'user
-   `(variable-pitch ((t (:family "SF Pro Display" :height ,my-font-height))))
-   `(fixed-pitch ((t (:family "JBMono Nerd Font" :height ,my-font-height))))))
+  (let ((my-font-height (if (string= (system-name) "deimos") 100 70))
+        (my-font-size   (if (string= (system-name) "deimos") 10 7)))
+    (set-face-attribute 'default nil :font "JBMono Nerd Font" :height my-font-height)
+    (set-fontset-font t nil (font-spec :size my-font-size :name "JBMono Nerd Font"))
+    (setq-default line-spacing 0.2)
+    (custom-theme-set-faces
+     'user
+     `(variable-pitch ((t (:family "SF Pro Display" :height ,my-font-height))))
+     `(fixed-pitch ((t (:family "JBMono Nerd Font" :height ,my-font-height))))))
 #+END_SRC
 
 Scale the variable pitch font to match the fixed pitch font. Otherwise, it looks slightly smaller.
@@ -143,27 +217,86 @@ Scale the variable pitch font to match the fixed pitch font. Otherwise, it looks
 #+END_SRC
 
 *** Zooming In/Out
-You can use the bindings C-+ C-- for zooming in/out. You can also use CTRL plus the mouse wheel for zooming in/out.
+
+You can use the bindings C-+ C– for zooming in/out. You can also use CTRL plus the mouse wheel for zooming in/out
+
 #+begin_src emacs-lisp
-    (use-package emacs
-      :bind
-      ("C-+" . text-scale-increase)
-      ("C--" . text-scale-decrease)
-      ("<C-wheel-up>" . text-scale-increase)
-      ("<C-wheel-down>" . text-scale-decrease))
+  (use-package emacs
+    :bind
+    ("C-+" . text-scale-increase)
+    ("C--" . text-scale-decrease)
+    ("<C-wheel-up>" . text-scale-increase)
+    ("<C-wheel-down>" . text-scale-decrease))
 #+end_src
 
+** Remove default UI elements
+
+By default, Emacs includes a lot of UI elements that may make it more discoverable. Personally, however, it causes unwanted visual noise.
+
+#+BEGIN_SRC emacs-lisp
+(setq inhibit-startup-message t)
+
+(scroll-bar-mode -1)        ; Disable visible scrollbar
+(tool-bar-mode -1)          ; Disable the toolbar
+(tooltip-mode -1)           ; Disable tooltips
+(set-fringe-mode 10)        ; Give some breathing room
+
+(menu-bar-mode -1)            ; Disable the menu bar
+(column-number-mode)
+(global-display-line-numbers-mode 1)
+(setq display-line-numbers-type 'relative)
+(global-visual-line-mode t)
+
+;; Disable line numbers for some modes
+(dolist (mode '(org-mode-hook
+                term-mode-hook
+                eshell-mode-hook))
+  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+#+END_SRC
+
+** Theme
+
+#+BEGIN_SRC emacs-lisp
+  (use-package doom-themes
+    :config (load-theme 'doom-meltbus t))
+#+END_SRC
+
+Use Solaire mode to distinguish between 'real' buffers and everything else.
+
+#+BEGIN_SRC emacs-lisp
+    (use-package solaire-mode
+      :ensure t
+      :config
+      (solaire-global-mode +1))
+#+END_SRC
+
 ** Modeline
-Replace the default modeline with a prettier more useful.
-#+begin_src emacs-lisp
+
+A better looking modeline than the default, and it's lightweight enough for my taste.
+
+#+BEGIN_SRC emacs-lisp
     (use-package doom-modeline
+      :ensure t
       :init (doom-modeline-mode 1)
       :custom
-      (doom-modeline-height 25)     ;; Sets modeline height
-      (doom-modeline-bar-width 5)   ;; Sets right bar width
-      (doom-modeline-persp-name t)  ;; Adds perspective name to modeline
-      (doom-modeline-persp-icon t)) ;; Adds folder icon next to persp name
+      (doom-modeline-height 32)
+      (doom-modeline-bar-width 4)
+      (doom-modeline-persp-name t)
+      (doom-modeline-persp-icon t))
 #+end_src
+
+** Which-key
+
+Cheatsheet for keybinds.
+
+#+BEGIN_SRC emacs-lisp
+(use-package which-key
+  :ensure t
+  :init (which-key-mode)
+  :diminish which-key-mode
+  :config
+  (setq which-key-idle-delay 0.3))
+#+END_SRC
 
 ** Olivetti
 
@@ -250,19 +383,6 @@ Allow the use of both variable pitch and fixed pitch fonts wherever appropriate.
   (global-ligature-mode t))
 #+END_SRC
 
-** Which-key
-
-Cheatsheet for keybinds.
-
-#+BEGIN_SRC emacs-lisp
-(use-package which-key
-  :ensure t
-  :init (which-key-mode)
-  :diminish which-key-mode
-  :config
-  (setq which-key-idle-delay 0.3))
-#+END_SRC
-
 ** Highlight TODO keywords
 
 #+BEGIN_SRC emacs-lisp
@@ -276,81 +396,6 @@ Cheatsheet for keybinds.
                                        ("REVIEW" font-lock-keyword-face bold)
                                        ("DEPRECATED" font-lock-doc-face bold))))
 #+END_SRC
-
-* Navigation
-** Evil
-
-Vim-like modal editing
-
-#+begin_src emacs-lisp
-(use-package evil 
-  :ensure t
-  :init
-  (setq evil-respect-visual-line-mode t) ;; respect visual lines
-
-  (setq evil-search-module 'isearch) ;; use emacs' built-in search functionality.
-
-  (setq evil-want-C-u-scroll t) ;; allow scroll up with 'C-u'
-  (setq evil-want-C-d-scroll t) ;; allow scroll down with 'C-d'
-
-  (setq evil-want-integration t) ;; necessary for evil collection
-  (setq evil-want-keybinding nil)
-
-  (setq evil-split-window-below t) ;; split windows created below
-  (setq evil-vsplit-window-right t) ;; vertically split windows created to the right
-
-  (setq evil-want-C-i-jump nil) ;; hopefully this will fix weird tab behaviour
-
-  (setq evil-undo-system 'undo-redo) ;; undo via 'u', and redo the undone change via 'C-r'; only available in emacs 28+.
-  :config
-  (evil-mode 1))
-
-(global-unset-key (kbd "C-j"))
-(global-set-key (kbd "C-h") #'evil-window-left)
-(global-set-key (kbd "C-j") #'evil-window-down)
-(global-set-key (kbd "C-k") #'evil-window-up)
-(global-set-key (kbd "C-l") #'evil-window-right)
-
-(use-package evil-collection ;; evilifies a bunch of things
-  :ensure t
-  :after evil
-  :init
-  (setq evil-collection-outline-bind-tab-p t) ;; '<TAB>' cycles visibility in 'outline-minor-mode'
-  :config
-  (evil-collection-init))
-
-(use-package evil-commentary
-  :ensure t
-  :after evil
-  :config
-  (evil-commentary-mode)) ;; globally enable evil-commentary
-
-(use-package evil-surround
-  :ensure t
-  :after evil
-  :config
-  (global-evil-surround-mode 1)) ;; globally enable evil-surround
-#+end_src
-** General
-
-=general.el= has an [[https://github.com/noctuid/general.el/issues/549][issue when used with Nix]].
-
-#+begin_src emacs-lisp
-  (use-package general
-    :after (evil)
-    (general-evil-setup)
-    (general-define-key
-     :states '(normal visual insert emacs)
-     :prefix "SPC"
-     :non-normal-prefix "C-SPC"
-     "." '(find-file :wk "Find file")
-     "TAB" '(comment-line :wk "Comment lines")
-     "f r" '(consult-recent-file :wk "Recent files")
-     "f g" '(consult-ripgrep :wk "Ripgrep search in files")
-     "f f" '(consult-fd :wk "Fd search for files")
-     "f l" '(consult-line :wk "Find line")
-     "f i" '(consult-imenu :wk "Imenu buffer locations")))
-#+end_src
 
 * Completion
 ** Vertico
@@ -611,6 +656,17 @@ Automatically insert the corresponding closing delimiter upon typing an opening 
     (require 'smartparens-config))
 #+END_SRC
 
+** ElDoc box
+
+A childframe box for ElDoc documentations.
+
+#+begin_src emacs-lisp
+  (use-package eldoc-box
+    :ensure t
+    :after (eldoc eglot)
+    :config (add-hook 'eglot-managed-mode-hook #'eldoc-box-hover-mode t))
+#+end_src
+
 * LSP client
 ** Optimisations
 
@@ -655,16 +711,6 @@ A lighter-weight LSP client for Emacs, compared to =lsp-mode=.
   (use-package eglot
     :defer t
     :ensure nil
-    :general
-    (:states '(normal visual)
-  	   :prefix "SPC"
-  	   :keymaps 'override
-  	   "e" '(:ignore t :wk "Eglot Evaluate")
-  	   "e e" '(eglot-reconnect :wk "Eglot Reconnect")
-  	   "e f" '(eglot-format :wk "Eglot Format")
-  	   "e l" '(consult-flymake :wk "Consult Flymake")
-  	   "e b" '(eval-buffer :wk "Evaluate elisp in buffer")
-  	   "e r" '(eval-region :wk "Evaluate elisp in region"))
     :hook
     (prog-mode . (lambda ()
                    (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
@@ -771,38 +817,23 @@ Check syntax on-the-fly when writing.
 #+END_SRC
 
 * Tree-sitter
+:PROPERTIES:
+:HEADER-ARGS:EMACS-LISP:  :noweb yes
+:END:
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle init.el
   (use-package tree-sitter
     :ensure t
     :hook
     (prog-mode . global-tree-sitter-mode))
   (use-package tree-sitter-langs
     :ensure t)
-  (use-package treesit-auto
-    :ensure t
-    :custom
-    (treesit-auto-install 'prompt)
-    :config
-    (treesit-auto-add-to-auto-mode-alist 'all)
-    (global-treesit-auto-mode))
-
 #+end_src
-
-** Evil mode integration
-
-#+begin_src emacs-lisp :noweb yes
-    (use-package evil-textobj-tree-sitter
-      :ensure t
-      :after (evil tree-sitter)
-      :config
-      <<tree-sitter-evil>>)
-#+END_SRC
 
 ** Navigation
 
 #+NAME: tree-sitter-evil
-#+BEGIN_SRC emacs-lisp :tangle no :noweb yes
+#+BEGIN_SRC emacs-lisp :tangle no
     ;; bind `function.outer`(entire function block) to `f` for use in things like `vaf`, `yaf`
     (define-key evil-outer-text-objects-map "f" (evil-textobj-tree-sitter-get-textobj(  "function.outer" )))
     ;; bind `function.inner`(function block without name and args) to `f` for use in things like `vif`, `yif`
@@ -814,18 +845,30 @@ Check syntax on-the-fly when writing.
 
 #+END_SRC
 
-** Code folding
+** Evil mode integration
+
+
+#+begin_src emacs-lisp
+    (use-package evil-textobj-tree-sitter
+      :ensure t
+      :after (evil tree-sitter)
+      :config
+      <<tree-sitter-evil>>)
+#+END_SRC
+
+* Projects
 
 #+BEGIN_SRC emacs-lisp
-    (use-package ts-fold
-      :ensure t
-      :general
-      ("C-c f O" 'ts-fold-open-all)
-      ("C-c f o" 'ts-fold-open-recursively)
-      ("C-c f C" 'ts-fold-close-all)
-      ("C-c f c" 'ts-fold-close)
-      ("C-c f z" 'ts-fold-toggle))
-#+end_src
+  (use-package projectile
+    :ensure t
+    :diminish projectile-mode
+    :config (projectile-mode)
+    :general ("p" '(projectile-command-map :wk "Projectile command map"))
+    :init
+    (when (file-directory-p "~/Documents/Projects")
+      (setq projectile-project-search-path '("~/Documents/Projects" "~/Documents/University/")))
+    (setq projectile-switch-project-action #'projectile-dired))
+#+END_SRC
 
 * Git
 ** Magit
@@ -833,12 +876,12 @@ Check syntax on-the-fly when writing.
 A nice interface to interact with Git with.
 
 #+BEGIN_SRC emacs-lisp
-  (use-package transient
-    :ensure t)
-  (use-package magit
-    :general
-    (:states '(normal visual) :prefix "SPC" :keymaps 'override
-  	   "gg" 'magit-status))
+    (use-package transient
+      :ensure t)
+    (use-package magit
+      :ensure t
+      :after (transient)
+      :general ("SPC g g" 'magit))
 #+END_SRC
 
 ** Git gutter
@@ -857,10 +900,10 @@ Display a diff of the current file against =HEAD= in the gringe.
     (diff-hl-draw-borders nil)
     :hook (vc-dir-mode . turn-on-diff-hl-mode)
     :hook (diff-hl-mode . diff-hl-flydiff-mode)
-    :hook (elpaca-after-init . global-diff-hl-mode)
     :config
     (if (fboundp 'fringe-mode) (fringe-mode '8))
     (setq-default fringes-outside-margins t)
+    (global-diff-hl-mode)
   ;; from https://github.com/jidibinlin/.emacs.d/blob/d5332b2a7877126e83dc3dc0c94e1c66dd5446c0/lisp/init-vc.el#L56C2-L91C69
     (defun dysthesis/pretty-diff-hl-fringe (&rest _)
       (let* ((scale (if (and (boundp 'text-scale-mode-amount)
@@ -909,6 +952,7 @@ Display a diff of the current file against =HEAD= in the gringe.
 #+BEGIN_SRC emacs-lisp
   (use-package rust-mode
     :ensure t
+    :mode "\\.rs\\'"
     :custom
     (rust-format-on-save t)
     (treesit-language-available-p 'rust)
@@ -919,12 +963,9 @@ Display a diff of the current file against =HEAD= in the gringe.
     (rust-mode . (lambda () (setq indent-tabs-mode nil)))
     ;; prettify symbols
     (rust-mode . (lambda () (prettify-symbols-mode))))
+    (use-package cargo
+      :ensure t)
 #+END_SRC
-
-#+begin_src emacs-lisp
-  (use-package cargo
-    :ensure t)
-#+end_src
 
 ** Nix
 
@@ -935,13 +976,42 @@ Display a diff of the current file against =HEAD= in the gringe.
     :hook (nix-mode . eglot-ensure))
 #+END_SRC
 
+** Haskell
+
+#+begin_src emacs-lisp
+  (use-package haskell-mode :ensure t)
+#+end_src
+
+** Zig
+
+#+begin_src emacs-lisp
+  (use-package zig-mode
+    :ensure t
+    :after eglot
+    :custom (zig-format-on-save 1)
+    :hook
+    (zig-mode . eglot-ensure)
+    :config
+    (add-to-list 'eglot-server-programs '(zig-mode . ("/usr/bin/zls"
+   												   :initializationOptions (:zig_exe_path (executable-find "zig")))))
+    (if (>= emacs-major-version 28)
+        (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
+      (progn
+        (defun colorize-compilation-buffer ()
+       	(let ((inhibit-read-only t))
+     		 (ansi-color-apply-on-region compilation-filter-start (point))))
+        (add-hook 'compilation-filter-hook 'colorize-compilation-buffer))))
+#+end_src
+
 * Bibliography
 ** Citar
 
 #+BEGIN_SRC emacs-lisp
   (use-package citar
     :ensure t
-    :after (org)
+    :demand t
+    :custom
+    (citar-bibliography '("~/Documents/Org/Library.bib"))
     :hook
     ((org-mode LaTeX-mode) . citar-capf-setup)
     :general
@@ -968,24 +1038,97 @@ Display a diff of the current file against =HEAD= in the gringe.
   (setq-default citar-open-note-function 'my-citar-org-open-notes)
 #+END_SRC
 
+* COMMENT EPUB reading
+:PROPERTIES:
+:HEADER-ARGS:EMACS-LISP: :noweb yes
+:END:
+
+#+BEGIN_SRC emacs-lisp :tangle init.el
+  (use-package nov
+    :ensure t
+    :mode ("\\.epub\\'" . nov-mode)
+    :general
+    <<nov-mode-keymap>>
+    :config
+    <<nov-disable-rendering-title>>
+    <<nov-setup>>)
+#+END_SRC
+
+** Keymaps
+
+#+name:nov-mode-keymap
+#+BEGIN_SRC emacs-lisp :tangle no
+  ("RET" 'nov-scroll-up)
+#+END_SRC
+
+** Disable rendering title
+
+#+name:nov-disable-rendering-title
+#+begin_src emacs-lisp :tangle no
+  (advice-add 'nov-render :override #'ignore)
+#+end_src
+
+** Setup function
+
+#+name:nov-setup
+#+begin_src emacs-lisp :tangle no
+  (defun +nov-mode-setup ()
+    "Tweak nov-mode to our liking."
+    (face-remap-add-relative 'variable-pitch
+                             :family "Georgia Pro"
+                             :height 1.4)
+    (face-remap-add-relative 'default :height 1.3)
+    (setq-local line-spacing 0.2
+                next-screen-context-lines 4
+                shr-use-colors nil)
+    (require 'visual-fill-column nil t)
+    (setq-local visual-fill-column-center-text t
+                visual-fill-column-width 81
+                nov-text-width 80)
+    (visual-fill-column-mode 1)
+    (hl-line-mode -1)
+    ;; Re-render with new display settings
+    (nov-render-document)
+    ;; Look up words with the dictionary.
+    (add-to-list '+lookup-definition-functions #'+lookup/dictionary-definition)
+    ;; Customise the mode-line to make it more minimal and relevant.
+    (setq-local
+     mode-line-format
+     `((:eval
+        (doom-modeline-segment--workspace-name))
+       (:eval
+        (doom-modeline-segment--window-number))
+       (:eval
+        (doom-modeline-segment--nov-info))
+       ,(propertize
+         " %P "
+         'face 'doom-modeline-buffer-minor-mode)
+       ,(propertize
+         " "
+         'face (if (doom-modeline--active) 'mode-line 'mode-line-inactive)
+         'display `((space
+                     :align-to
+                     (- (+ right right-fringe right-margin)
+                        ,(* (let ((width (doom-modeline--font-width)))
+                              (or (and (= width 1) 1)
+                                  (/ width (frame-char-width) 1.0)))
+                            (string-width
+                             (format-mode-line (cons "" '(:eval (doom-modeline-segment--major-mode))))))))))
+       (:eval (doom-modeline-segment--major-mode)))))
+  (add-hook 'nov-mode-hook #'+nov-mode-setup)
+#+end_src
+
 * Org-mode
-
-*NOTE:* Issues currently exist with setting variables (primarily =org-directory=) with the following.
-
-It appears to be isolated; eliminating all other configurations but the current 'Org-mode' section does not alleviate this issue.
-
-It also does not seem to be specific to the =:custom= section, as attempts at configuring it via `=:config=` with =setq= results in the same outcome.
 
 #+BEGIN_SRC emacs-lisp :noweb yes :tangle init.el
   (use-package org
     :ensure nil
-    :demand t
+    :after citar
     :general
     ("C-c c" 'org-capture)
     ("S-RET" 'org-open-at-point)
     :custom
     (org-directory "~/Documents/Org/")
-    (citar-bibliography '((concat org-directory "Library.bib"))
     (org-archive-location (concat org-directory "archive.org::* From =%s="))
     (org-preview-latex-default-process 'dvisvgm)
     (org-highlight-latex-and-related '(latex script entities))
@@ -994,7 +1137,7 @@ It also does not seem to be specific to the =:custom= section, as attempts at co
     (org-cite-follow-processor 'citar)
     (org-cite-activate-processor 'citar)
     :config
-    <<org-latex-config>>))
+    <<org-latex-config>>)
 #+END_SRC
 
 ** Agenda
@@ -1168,7 +1311,7 @@ Combine the previously defined functions to process the entire inbox.
 
 Better agenda views.
 
-#+BEGIN_SRC emacs-lisp :tangle init.el
+#+BEGIN_SRC emacs-lisp
   (use-package org-super-agenda
     :ensure t
     :after org-agenda
@@ -1240,7 +1383,7 @@ Better agenda views.
 
 ** Capture templates
 
-#+BEGIN_SRC emacs-lisp :tangle init.el
+#+BEGIN_SRC emacs-lisp
     (use-package doct
       :ensure t
       :commands (doct)
@@ -1275,7 +1418,7 @@ Better agenda views.
 
 Taken from [[https://github.com/doomemacs/doomemacs/blob/311ad23fd410f976f66c40f98e26aa7ee2dda8c3/modules/lang/org/autoload/org.el#L151][Doom Emacs]].
 
-#+begin_src emacs-lisp :tangle init.el
+#+begin_src emacs-lisp
   (defun +org/dwim-at-point (&optional arg)
     "Do-what-I-mean at point.
 
@@ -1418,7 +1561,7 @@ Taken from [[https://github.com/doomemacs/doomemacs/blob/311ad23fd410f976f66c40f
 
 ** Evil mode intergration
 
-#+BEGIN_SRC emacs-lisp :tangle init.el
+#+BEGIN_SRC emacs-lisp
   (use-package evil-org
     :ensure t
     :after org
@@ -1449,33 +1592,33 @@ Show emphasis markers only when hovered over.
 :END:
 
 #+BEGIN_SRC emacs-lisp :tangle init.el
-  (use-package org-modern
-    :ensure t
-    :config
-    (menu-bar-mode -1)
-    (tool-bar-mode -1)
-    (scroll-bar-mode -1)
-    (org-indent-mode)
-    (dolist (face '(window-divider
-  		      window-divider-first-pixel
-  		      window-divider-last-pixel))
-  	(face-spec-reset-face face)
-  	(set-face-foreground face (face-attribute 'default :background)))
-    (set-face-background 'fringe (face-attribute 'default :background))
-    (setq org-hide-emphasis-markers t)
-    <<org-modern-list-bullets>>
-    <<org-modern-header-icons>>
-    <<org-modern-block-icons>>
-    (setq org-modern-block-fringe 6)
-    <<org-modern-agenda>>
-    <<org-ellipsis>>
-    (global-org-modern-mode)
-    (setq org-pretty-entities t))
+    (use-package org-modern
+      :ensure t
+      :config
+      (menu-bar-mode -1)
+      (tool-bar-mode -1)
+      (scroll-bar-mode -1)
+      (org-indent-mode)
+      (dolist (face '(window-divider
+		      window-divider-first-pixel
+		      window-divider-last-pixel))
+	(face-spec-reset-face face)
+	(set-face-foreground face (face-attribute 'default :background)))
+      (set-face-background 'fringe (face-attribute 'default :background))
+      (setq org-hide-emphasis-markers t)
+      <<org-modern-list-bullets>>
+      <<org-modern-keyword-icons>>
+      <<org-modern-block-icons>>
+      (setq org-modern-block-fringe 6)
+      <<org-modern-agenda>>
+      <<org-ellipsis>>
+      (global-org-modern-mode)
+      (setq org-pretty-entities t))
 #+END_SRC
 
 **** Folded header ellipses
 #+name:org-ellipsis
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (setq org-ellipsis " ↪")
 #+END_SRC
 
@@ -1512,36 +1655,28 @@ Show emphasis markers only when hovered over.
           ("auto_tangle" . "󱋿 ")
           ("subtitle" . "𝙩 ")
           ("author" . "𝘼 ")
-          ("email" . #(" " 0 1 (display (raise -0.14))))
           ("date" . "𝘿 ")
           ("property" . "☸ ")
           ("options" . "⌥ ")
           ("startup" . "⏻ ")
           ("macro" . "𝓜 ")
-          ("bind" . #(" " 0 1 (display (raise -0.1))))
           ("bibliography" . " ")
-          ("print_bibliography" . #(" " 0 1 (display (raise -0.1))))
           ("cite_export" . "⮭ ")
-          ("print_glossary" . #("ᴬᶻ " 0 1 (display (raise -0.1))))
-          ("glossary_sources" . #(" " 0 1 (display (raise -0.14))))
           ("include" . "⇤ ")
           ("setupfile" . "⇚ ")
           ("html_head" . "🅷 ")
           ("html" . "🅗 ")
           ("latex_class" . "🄻 ")
-          ("latex_class_options" . #("🄻 " 1 2 (display (raise -0.14))))
           ("latex_header" . "🅻 ")
           ("latex_header_extra" . "🅻⁺ ")
           ("latex" . "🅛 ")
           ("beamer_theme" . "🄱 ")
-          ("beamer_color_theme" . #("🄱 " 1 2 (display (raise -0.12))))
           ("beamer_font_theme" . "🄱𝐀 ")
           ("beamer_header" . "🅱 ")
           ("beamer" . "🅑 ")
           ("attr_latex" . "🄛 ")
           ("attr_html" . "🄗 ")
           ("attr_org" . "⒪ ")
-          ("call" . #(" " 0 1 (display (raise -0.15))))
           ("name" . "⁍ ")
           ("header" . "› ")
           ("caption" . "☰ ")
@@ -1620,9 +1755,8 @@ Highlight each day in the calendar according to the number of tasks due that day
 #+BEGIN_SRC emacs-lisp :tangle init.el
   (use-package org-roam
     :ensure t
-    :after (org)
     :custom
-    (org-roam-directory (file-truename (concat org-directory "Roam/")))
+    (org-roam-directory (file-truename "~/Documents/Org/Roam/"))
     (org-roam-complete-everywhere t)
     (org-roam-buffer-window-parameters '((no-delete-other-windows . t)))
     (org-roam-link-use-custom-faces 'everywhere)
@@ -1647,7 +1781,6 @@ Highlight each day in the calendar according to the number of tasks due that day
     ;; Dailies
     :config
     ;; If you're using a vertical completion framework, you might want a more informative completion interface
-    (setq org-roam-directory (file-truename (concat org-directory "Roam/")))
     (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
     (org-roam-db-autosync-mode)
     ;; If using org-roam-protocol
@@ -1704,7 +1837,7 @@ Highlight each day in the calendar according to the number of tasks due that day
 
 *** Citar integration
 
-#+BEGIN_SRC emacs-lisp :tangle init.el
+#+BEGIN_SRC emacs-lisp
   (use-package citar-org-roam
     :ensure t
     :after (citar org-roam)
@@ -1733,7 +1866,7 @@ Highlight each day in the calendar according to the number of tasks due that day
 
 Add a creation date and maintain a last edited date for each Org-roam node.
 
-#+BEGIN_SRC emacs-lisp :tangle init.el
+#+BEGIN_SRC emacs-lisp
     (use-package org-roam-timestamps
       :ensure t
       :after org-roam
@@ -1772,7 +1905,7 @@ Add a creation date and maintain a last edited date for each Org-roam node.
 
 ** Org-ref
 
-#+BEGIN_SRC emacs-lisp :tangle init.el
+#+BEGIN_SRC emacs-lisp
   (use-package org-ref
     :ensure t
     :config
@@ -1810,7 +1943,7 @@ Add a creation date and maintain a last edited date for each Org-roam node.
 
 ** Org-noter
 
-#+BEGIN_SRC emacs-lisp :tangle init.el
+#+BEGIN_SRC emacs-lisp
   (use-package org-noter
     :ensure t
     :after (:any org pdf-view)
@@ -1822,6 +1955,37 @@ Add a creation date and maintain a last edited date for each Org-roam node.
      org-noter-hide-other nil
      ;; Everything is relative to the main notes file
      org-noter-notes-search-path (list org-directory)))
+#+END_SRC
+
+** COMMENT Org-remark
+
+Annotation of PDFs, websites, etc.
+
+#+BEGIN_Src emacs-lisp
+  (use-package org-remark
+    :ensure t
+    :bind (;; :bind keyword also implicitly defers org-remark itself.
+           ;; Keybindings before :map is set for global-map.
+           ("C-c m m" . org-remark-mark)
+           ("C-c m l" . org-remark-mark-line)
+           :map org-remark-mode-map
+           ("C-c m o" . org-remark-open)
+           ("C-c m ]" . org-remark-view-next)
+           ("C-c m [" . org-remark-view-prev)
+           ("C-c m r" . org-remark-remove)
+           ("C-c m d" . org-remark-delete))
+    ;; Alternative way to enable `org-remark-global-tracking-mode' in
+    ;; `after-init-hook'.
+    ;; :hook (after-init . org-remark-global-tracking-mode)
+    :init
+    ;; It is recommended that `org-remark-global-tracking-mode' be
+    ;; enabled when Emacs initializes. Alternatively, you can put it to
+    ;; `after-init-hook' as in the comment above
+    (org-remark-global-tracking-mode +1)
+    :config
+    (use-package org-remark-info :after info :config (org-remark-info-mode +1))
+    (use-package org-remark-eww  :after eww  :config (org-remark-eww-mode +1))
+    (use-package org-remark-nov  :after nov  :config (org-remark-nov-mode +1)))
 #+END_SRC
 
 ** Org-babel
@@ -1845,7 +2009,7 @@ Automatically tangle all code blocks on Org-mode files marked with =#+auto_tangl
 Make the rendered preview's background transparent and foreground white
 
 #+name:org-latex-config
-#+BEGIN_SRC emacs-lisp :noweb yes :tangle no
+#+BEGIN_SRC emacs-lisp :noweb yes
     (plist-put org-format-latex-options :foreground "White")
     (plist-put org-format-latex-options :background nil)
     (plist-put org-format-latex-options :scale 0.65)
@@ -1855,7 +2019,7 @@ Make the rendered preview's background transparent and foreground white
 
 Toggles the source code when a LaTeX fragment is under the cursor; otherwise, render the preview.
 
-#+BEGIN_SRC emacs-lisp :tangle init.el
+#+BEGIN_SRC emacs-lisp
     (use-package org-fragtog
       :ensure t
       :after org
@@ -1867,7 +2031,7 @@ Toggles the source code when a LaTeX fragment is under the cursor; otherwise, re
 
 Render previews forTikZ plots inside LaTeX fragments in Org files.
 
-#+BEGIN_SRC emacs-lisp :tangle init.el
+#+BEGIN_SRC emacs-lisp
   (add-to-list 'org-latex-packages-alist
                '("" "tikz" t))
 
@@ -1885,6 +2049,25 @@ Use vterm because it is simple and fast, and does all I need.
 #+end_src
 
 * Miscellaneous
+** Consult
+
+#+begin_src emacs-lisp
+  (use-package consult
+    :demand t
+    :general
+    ;; ("SPC f r" 'consult-recent-file)
+    ("SPC f f" 'consult-fd)
+    ("SPC f g" 'consult-ripgrep)
+    ("SPC f l" 'consult-line)
+    ("SPC f i" 'consult-imenu))
+#+end_src
+
+** Default shell
+
+#+begin_src emacs-lisp
+  (setq-default shell-file-name (executable-find "bash"))
+#+end_src
+
 ** Direnv
 
 #+begin_src emacs-lisp
@@ -1939,3 +2122,4 @@ This package optimises the garbage collector strategy for better performance.
     :ensure t
     :config (gcmh-mode 1))
 #+end_src
+
