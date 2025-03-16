@@ -4,7 +4,6 @@
   emacs-unstable,
   emacsWithPackagesFromUsePackage,
   runCommand,
-  size ? 10,
 }: let
   inherit (lib.babel.pkgs) mkWrapper;
   inherit (lib.babel.emacs) orgTangle;
@@ -41,9 +40,7 @@
   });
 
   config = "${cfg}/init.el";
-in
-  builtins.trace "init.el file is at ${config}"
-  emacsWithPackagesFromUsePackage {
+  final = emacsWithPackagesFromUsePackage {
     inherit package config;
     alwaysEnsure = true;
     alwaysTangle = true;
@@ -51,4 +48,19 @@ in
     extraEmacsPackages = epkgs: [
       epkgs.use-package
     ];
-  }
+  };
+  deps = with pkgs; [
+    fd
+    ripgrep
+    texliveFull
+  ];
+in
+  builtins.trace "init.el file is at ${config}"
+  mkWrapper
+  pkgs
+  final ''
+    for file in $out/bin/emacs $out/bin/emacs-*; do
+      wrapProgram $file \
+        --prefix PATH ":" "${lib.makeBinPath deps}"
+    done
+  ''
