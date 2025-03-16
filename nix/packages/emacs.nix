@@ -43,7 +43,6 @@
   final = emacsWithPackagesFromUsePackage {
     inherit package config;
     alwaysEnsure = true;
-    alwaysTangle = true;
     defaultInitFile = true;
     extraEmacsPackages = epkgs: [
       epkgs.use-package
