@@ -1016,6 +1016,39 @@ Display a diff of the current file against =HEAD= in the gringe.
         (add-hook 'compilation-filter-hook 'colorize-compilation-buffer))))
 #+end_src
 
+** Python
+
+#+begin_src emacs-lisp
+  (use-package python
+    :mode ("[./]flake8\\'" . conf-mode)
+    :mode ("/Pipfile\\'" . conf-mode)
+    :init
+    (setq python-indent-guess-indent-offset-verbose nil))
+
+  (use-package anaconda-mode
+    :defer t
+    :after python
+    :init
+    (setq anaconda-mode-eldoc-as-single-line t)
+    :config
+    (general-define-key
+     :states '(normal visual insert emacs)
+     :prefix "SPC"
+     :non-normal-prefix "C-SPC"
+     "g d" 'anaconda-mode-find-definitions
+     "g h" 'anaconda-mode-show-doc
+     "g a" 'anaconda-mode-find-assignments
+     "g f" 'anaconda-mode-find-file
+     "g u" 'anaconda-mode-find-references))
+
+  (use-package lsp-pyright
+    :defer t
+    :after python
+    :init
+    (when (executable-find "basedpyright")
+      (setq lsp-pyright-langserver-command "basedpyright")))
+#+end_src
+
 * Bibliography
 ** Citar
 
