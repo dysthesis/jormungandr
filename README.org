@@ -1060,18 +1060,9 @@ Display a diff of the current file against =HEAD= in the gringe.
   (use-package nov
     :ensure t
     :mode ("\\.epub\\'" . nov-mode)
-    :general
-    <<nov-mode-keymap>>
     :config
     <<nov-disable-rendering-title>>
     <<nov-setup>>)
-#+END_SRC
-
-** Keymaps
-
-#+name:nov-mode-keymap
-#+BEGIN_SRC emacs-lisp :tangle no
-  ("RET" 'nov-scroll-up)
 #+END_SRC
 
 ** Disable rendering title
