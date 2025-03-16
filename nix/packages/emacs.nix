@@ -52,6 +52,7 @@
     fd
     ripgrep
     texliveFull
+    unzip
   ];
 in
   builtins.trace "init.el file is at ${config}"
