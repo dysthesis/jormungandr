@@ -362,7 +362,7 @@
   (org-block            (:inherit 'fixed-pitch))
 
   (org-document-title (:height 2.0
-			       :weight 'heavy))
+			       :weight 'bold))
   (outline-1 (:height 1.5
 		      :weight 'bold))
   (outline-2 (:height 1.4
