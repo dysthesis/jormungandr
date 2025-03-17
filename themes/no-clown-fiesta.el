@@ -1,10 +1,8 @@
 ;;; no-clown-fiesta-theme.el --- Not-so-colorful-theme -*- lexical-binding: t -*-
 
-;; URL: https://github.com/ranmaru22/no-clown-fiesta-theme.el
-;; Package-Version: 20230220.1019
-;; Package-Commit: e143cdfa7cecac6383328eca88586105f308bca9
+;; URL: https://codeberg.org/ranmaru22/no-clown-fiesta-theme.el
 ;; Author: ranmaru22
-;; Version: 1.1
+;; Version: 1.2
 ;; Package-Requires: ((emacs "26.1") (autothemer "0.2"))
 
 ;; Copyright (c) 2022-2023 ranmaru22
@@ -46,9 +44,9 @@
  ((((class color) (min-colors #xFFFFFF))) ;; GUI only for now
 
   ;; Color palette
-  (fg                 "#E1E1E1")
-  (bg                 "#151515")
-  (_bg-darker         "#101010")
+  (fg                 "#ffffff")
+  (bg                 "#000000")
+  (_bg-darker         "#010101")
   (alt-bg             "#202020")
   (accent             "#242424")
   (white              "#E1E1E1")
@@ -65,7 +63,9 @@
   (red                "#CC6666")
   (green              "#90A959")
   (light-green        "#77dd77")
+  (pale-green         "#61A06A")
   (yellow             "#F4BF75")
+  (pale-yellow        "#AF9A6A")
   (orange             "#FFA557")
   (purple             "#AA749F")
   (pale-purple        "#b790d4")
@@ -78,15 +78,26 @@
   (sign-delete        "#AC4142")
   (error-red          "#AC4142")
   (warning-orange     "#F4BF75")
-  (_info-yellow       "#F4BF75")
+  (info-purple        "#AA58DD")
   (success-green      "#77dd77")
   (hint-blue          "#A5D6FF")
-  (_hint-green        "#90A959")
+  (hint-green         "#909909")
   (magit-light-green  "#4f5c32")
   (_magit-blue        "#33424f")
   (magit-green        "#3f4928")
   (magit-light-red    "#4f2929")
-  (magit-red          "#3f2121"))
+  (magit-red          "#3f2121")
+
+  ;; Rainbow mappings (thanks Prot for the idea!)
+  (rainbow-1 medium-gray-blue)
+  (rainbow-2 gray-blue)
+  (rainbow-3 cyan)
+  (rainbow-4 green)
+  (rainbow-5 blue)
+  (rainbow-6 purple)
+  (rainbow-7 pale-purple)
+  (rainbow-8 pale-yellow)
+  (rainbow-9 pale-green))
 
  ;; Basic
  ((border                   (:background alt-bg :foreground medium-gray))
@@ -152,35 +163,35 @@
   ;; Rainbow delimiter
   (rainbow-delimiters-base-error-face (:foreground error-red :weight 'bold))
   (rainbow-delimiters-base-face       (:foreground fg))
-  (rainbow-delimiters-depth-1-face    (:foreground medium-gray-blue))
-  (rainbow-delimiters-depth-2-face    (:foreground gray-blue))
-  (rainbow-delimiters-depth-3-face    (:foreground cyan))
-  (rainbow-delimiters-depth-4-face    (:foreground green))
-  (rainbow-delimiters-depth-5-face    (:foreground medium-gray-blue))
-  (rainbow-delimiters-depth-6-face    (:foreground gray-blue))
-  (rainbow-delimiters-depth-7-face    (:foreground cyan))
-  (rainbow-delimiters-depth-8-face    (:foreground green))
-  (rainbow-delimiters-depth-9-face    (:foreground medium-gray-blue))
+  (rainbow-delimiters-depth-1-face    (:foreground rainbow-1))
+  (rainbow-delimiters-depth-2-face    (:foreground rainbow-2))
+  (rainbow-delimiters-depth-3-face    (:foreground rainbow-3))
+  (rainbow-delimiters-depth-4-face    (:foreground rainbow-4))
+  (rainbow-delimiters-depth-5-face    (:foreground rainbow-5))
+  (rainbow-delimiters-depth-6-face    (:foreground rainbow-6))
+  (rainbow-delimiters-depth-7-face    (:foreground rainbow-7))
+  (rainbow-delimiters-depth-8-face    (:foreground rainbow-8))
+  (rainbow-delimiters-depth-9-face    (:foreground rainbow-9))
   (rainbow-delimiters-mismatched-face (:foreground error-red :weight 'bold))
   (rainbow-delimiters-unmatched-face  (:foreground error-red :weight 'bold))
 
   ;; Mode-line
   (mode-line          (:foreground fg
-                       :background dark-gray
-                       :box (:line-width 4 :color dark-gray)))
+				   :background dark-gray
+				   :box (:line-width 4 :color dark-gray)))
   (mode-line-inactive (:foreground medium-gray
-                       :background alt-bg
-                       :box (:line-width 4 :color alt-bg)))
+				   :background alt-bg
+				   :box (:line-width 4 :color alt-bg)))
 
-;; Tab-bar
+  ;; Tab-bar
   (tab-bar                    (:foreground medium-gray
-                               :background dark-gray
-                               :box (:line-width 4 :color dark-gray)))
+					   :background dark-gray
+					   :box (:line-width 4 :color dark-gray)))
   (tab-bar-tab                (:foreground fg))
   (tab-bar-tab-group-current  (:foreground fg :weight 'bold :underline t))
   (tab-bar-tab-inactive       (:foreground medium-gray))
   (tab-bar-tab-ungrouped      (:foreground medium-gray))
-  (tab-bar-tab-group-inactive (:foreground medium-gray))
+  (tab-bar-tab-group-inactive (:foreground medium-gray :underline t))
 
   ;; Font lock
   (font-lock-builtin-face           (:foreground cyan))
@@ -318,14 +329,21 @@
   (orderless-match-face-2 (:foreground magenta :weight 'bold))
   (orderless-match-face-3 (:foreground light-green :weight 'bold))
 
+  ;; Completion preview
+  (completion-preview        (:background 'unspecified :foreground medium-gray))
+  (completion-preview-common (:background 'unspecified :foreground medium-gray))
+  (completion-preview-exact  (:background 'unspecified :foreground hint-blue))
+
   ;; Corfu
-  (corfu-current     (:inherit 'highlight))
-  (corfu-bar         (:background medium-gray))
-  (corfu-border      (:background medium-gray))
-  (corfu-default     (:background alt-bg))
-  (corfu-annotations (:foreground medium-gray))
-  (corfu-deprecated  (:foreground medium-gray :strike-through t))
-  (corfu-echo        (:foreground medium-gray))
+  (corfu-current                            (:inherit 'highlight))
+  (corfu-bar                                (:background medium-gray))
+  (corfu-border                             (:background medium-gray))
+  (corfu-default                            (:background alt-bg))
+  (corfu-annotations                        (:foreground medium-gray))
+  (corfu-deprecated                         (:foreground medium-gray :strike-through t))
+  (corfu-echo                               (:foreground medium-gray))
+  (corfu-candidate-overlay-face             (:background 'unspecified :foreground medium-gray))
+  (corfu-candidate-overlay-face-exact-match (:background 'unspecified :foreground hint-blue))
 
   ;; Company (just for compatibility ... use Corfu instead)
   (company-tooltip                      (:background alt-bg))
@@ -335,21 +353,40 @@
   (company-scrollbar-fg                 (:background alt-bg))
   (company-scrollbar-bg                 (:background medium-gray))
   (company-preview                      (:background 'unspecified
-                                         :foreground green))
+						     :foreground green))
   (company-preview-common               (:background 'unspecified
-                                         :foreground green))
+						     :foreground green))
 
   ;; org-mode
   (org-default          (:foreground fg))
   (org-block            (:inherit 'fixed-pitch))
-  (org-level-1          (:foreground medium-gray-blue :weight 'bold))
-  (org-level-2          (:foreground gray-blue :weight 'bold))
-  (org-level-3          (:foreground cyan :weight 'bold))
-  (org-level-4          (:foreground green :weight 'bold))
-  (org-level-5          (:foreground medium-gray-blue :weight 'bold))
-  (org-level-6          (:foreground gray-blue :weight 'bold))
-  (org-level-7          (:foreground cyan :weight 'bold))
-  (org-level-8          (:foreground green :weight 'bold))
+
+  (org-document-title (:height 2.0
+			       :weight 'bold))
+  (outline-1 (:height 1.5
+		      :weight 'bold))
+  (outline-2 (:height 1.4
+		      :weight 'bold))
+  (outline-3 (:height 1.3
+		      :weight 'bold))
+  (outline-4 (:height 1.2
+		      :weight 'bold))
+  (outline-5 (:height 1.1
+		      :weight 'bold))
+  (outline-6 (:height 1.0
+		      :weight 'bold))
+  (outline-7 (:height 1.0
+		      :weight 'normal))
+  (outline-8 (:height 1.0
+		      :weight 'normal))
+  ;; (org-level-1          (:foreground rainbow-1 :weight 'bold))
+  ;; (org-level-2          (:foreground rainbow-2 :weight 'bold))
+  ;; (org-level-3          (:foreground rainbow-3 :weight 'bold))
+  ;; (org-level-4          (:foreground rainbow-4 :weight 'bold))
+  ;; (org-level-5          (:foreground rainbow-5 :weight 'bold))
+  ;; (org-level-6          (:foreground rainbow-6 :weight 'bold))
+  ;; (org-level-7          (:foreground rainbow-7 :weight 'bold))
+  ;; (org-level-8          (:foreground rainbow-8 :weight 'bold))
   (org-quote            (:foreground gray-blue))
   (org-code             (:foreground green))
   (org-verbatim         (:foreground blue))
@@ -390,8 +427,8 @@
   (diredfl-deletion               (:strike-through t))
   (diredfl-deletion-file-name     (:foreground red :strike-through t))
   (diredfl-dir-heading            (:foreground yellow
-                                   :weight 'bold
-                                   :underline t))
+					       :weight 'bold
+					       :underline t))
   (diredfl-dir-name               (:foreground cyan))
   (diredfl-dir-priv               (:foreground cyan))
   (diredfl-exec-priv              (:foreground green))
@@ -414,8 +451,8 @@
   ;; Treemacs
   (treemacs-directory-face       (:foreground white))
   (treemacs-root-face            (:foreground yellow
-                                  :weight 'bold
-                                  :underline t))
+					      :weight 'bold
+					      :underline t))
   (treemacs-git-added-face       (:foreground green))
   (treemacs-git-commit-diff-face (:foreground blue))
   (treemacs-git-conflict-face    (:foreground red))
@@ -423,18 +460,123 @@
   (treemacs-git-modified-face    (:foreground blue))
   (treemacs-marked-file-face     (:inherit 'highlight))
 
+  ;; web-mode
+  (web-mode-current-element-highlight-face (:background 'unspecified
+							:foreground blue
+							:weight 'bold))
+  (web-mode-current-column-highlight-face  (:background dark-gray))
+
   ;; ERC
   (erc-notice-face    (:foreground purple))
   (erc-timestamp-face (:foreground medium-gray-blue))
   (erc-input-face     (:foreground yellow))
-  (erc-my-nick-face   (:foreground yellow)))
+  (erc-my-nick-face   (:foreground yellow))
+
+  ;; Gnus
+  (gnus-server-agent                 (:foreground hint-blue))
+  (gnus-server-cloud                 (:foreground hint-green :weight 'bold))
+  (gnus-server-cloud-host            (:foreground hint-green :slant 'italic))
+  (gnus-server-closed                (:foreground warning-orange :slant 'italic))
+  (gnus-server-denied                (:foreground error-red :weight 'bold))
+  (gnus-server-opened                (:foreground success-green :weight 'bold))
+  (gnus-server-offline               (:foreground light-gray :weight 'bold))
+  (gnus-summary-cancelled            (:foreground light-gray :strike-through t))
+  (gnus-summary-selected             (:background dark-gray))
+  (gnus-summary-low-unread           (:foreground white :slant 'italic))
+  (gnus-summary-low-read             (:foreground light-gray :slant 'italic))
+  (gnus-summary-low-ticked           (:foreground yellow :slant 'italic))
+  (gnus-summary-low-ancient          (:foreground gray-blue :slant 'italic))
+  (gnus-summary-low-undownloaded     (:foreground medium-gray :slant 'italic))
+  (gnus-summary-normal-unread        (:foreground white))
+  (gnus-summary-normal-read          (:foreground light-gray))
+  (gnus-summary-normal-ticked        (:foreground yellow))
+  (gnus-summary-normal-ancient       (:foreground gray-blue))
+  (gnus-summary-normal-undownloaded  (:foreground medium-gray))
+  (gnus-summary-high-unread          (:foreground white :weight 'bold))
+  (gnus-summary-high-read            (:foreground light-gray :weight 'bold))
+  (gnus-summary-high-ticked          (:foreground yellow :weight 'bold))
+  (gnus-summary-high-ancient         (:foreground gray-blue :weight 'bold))
+  (gnus-summary-high-undownloaded    (:foreground medium-gray :weight 'bold))
+  (gnus-header                       (:inherit 'fixed-pitch :foreground pale-purple))
+  (gnus-header-content               (:inherit 'fixed-pitch :foreground medium-gray-blue))
+  (gnus-header-name                  (:inherit 'fixed-pitch :foreground pale-purple :weight 'bold))
+  (gnus-header-from                  (:inherit 'fixed-pitch :foreground orange :weight 'bold))
+  (gnus-header-subject               (:inherit 'fixed-pitch :foreground blue))
+  (gnus-header-newsgroups            (:inherit 'fixed-pitch :foreground purple :slant 'italic))
+  (gnus-signature                    (:foreground light-gray :slant 'italic))
+  (gnus-button                       (:foreground medium-gray-blue :underline t))
+  (gnus-group-news-1                 (:foreground rainbow-1 :weight 'bold))
+  (gnus-group-news-2                 (:foreground rainbow-2 :weight 'bold))
+  (gnus-group-news-3                 (:foreground rainbow-3 :weight 'bold))
+  (gnus-group-news-4                 (:foreground rainbow-4 :weight 'bold))
+  (gnus-group-news-5                 (:foreground rainbow-5 :weight 'bold))
+  (gnus-group-news-6                 (:foreground rainbow-6 :weight 'bold))
+  (gnus-group-news-low               (:foreground rainbow-7 :weight 'bold))
+  (gnus-group-news-1-empty           (:foreground rainbow-1))
+  (gnus-group-news-2-empty           (:foreground rainbow-2))
+  (gnus-group-news-3-empty           (:foreground rainbow-3))
+  (gnus-group-news-4-empty           (:foreground rainbow-4))
+  (gnus-group-news-5-empty           (:foreground rainbow-5))
+  (gnus-group-news-6-empty           (:foreground rainbow-6))
+  (gnus-group-news-low-empty         (:foreground rainbow-7))
+  (gnus-group-mail-1                 (:foreground rainbow-1 :weight 'bold))
+  (gnus-group-mail-2                 (:foreground rainbow-2 :weight 'bold))
+  (gnus-group-mail-3                 (:foreground rainbow-3 :weight 'bold))
+  (gnus-group-mail-4                 (:foreground rainbow-4 :weight 'bold))
+  (gnus-group-mail-5                 (:foreground rainbow-5 :weight 'bold))
+  (gnus-group-mail-6                 (:foreground rainbow-6 :weight 'bold))
+  (gnus-group-mail-low               (:foreground rainbow-7 :weight 'bold))
+  (gnus-group-mail-1-empty           (:foreground rainbow-1))
+  (gnus-group-mail-2-empty           (:foreground rainbow-2))
+  (gnus-group-mail-3-empty           (:foreground rainbow-3))
+  (gnus-group-mail-4-empty           (:foreground rainbow-4))
+  (gnus-group-mail-5-empty           (:foreground rainbow-5))
+  (gnus-group-mail-6-empty           (:foreground rainbow-6))
+  (gnus-group-mail-low-empty         (:foreground rainbow-7))
+  (gnus-cite-1                       (:foreground rainbow-1))
+  (gnus-cite-2                       (:foreground rainbow-2))
+  (gnus-cite-3                       (:foreground rainbow-3))
+  (gnus-cite-4                       (:foreground rainbow-4))
+  (gnus-cite-5                       (:foreground rainbow-5))
+  (gnus-cite-6                       (:foreground rainbow-6))
+  (gnus-cite-7                       (:foreground rainbow-7))
+  (gnus-cite-8                       (:foreground rainbow-8))
+  (gnus-cite-9                       (:foreground rainbow-9))
+  (gnus-cite-10                      (:foreground rainbow-1))
+  (gnus-cite-11                      (:foreground rainbow-2))
+
+  ;; mu4e
+  (mu4e-header-key-face             (:foreground hint-blue))
+  (mu4e-header-field-face           (:foreground white))
+  (mu4e-header-marks-face           (:foreground hint-blue))
+  (mu4e-header-title-face           (:foreground pale-purple :weight 'bold))
+  (mu4e-header-value-face           (:foreground pale-purple))
+  (mu4e-special-header-value-face   (:foreground red))
+  (mu4e-title-face                  (:foreground yellow))
+  (mu4e-highlight-face              (:foreground orange :weight 'bold))
+  (mu4e-header-face                 (:foreground white))
+  (mu4e-header-highlight-face       (:inherit 'hl-line))
+  (mu4e-column-faces-date           (:foreground medium-gray-blue))
+  (mu4e-column-faces-size           (:foreground medium-gray))
+  (mu4e-column-faces-tags           (:foreground hint-blue))
+  (mu4e-column-faces-flags          (:foreground hint-blue))
+  (mu4e-column-faces-maildir        (:foreground medium-gray-blue))
+  (mu4e-column-faces-to-from        (:foreground medium-gray-blue))
+  (mu4e-column-faces-signature      (:foreground info-purple))
+  (mu4e-column-faces-decryption     (:foreground info-purple :weight 'bold))
+  (mu4e-column-faces-message-id     (:foreground info-purple :weight 'bold))
+  (mu4e-column-faces-user-agent     (:foreground medium-gray-blue))
+  (mu4e-column-faces-attachments    (:foreground info-purple))
+  (mu4e-column-faces-mailing-list   (:foregorund medium-gray-blue))
+  (mu4e-column-faces-thread-subject (:foreground white))
+  (mu4e-unread-face                 (:foreground hint-blue :weight 'bold)))
 
  (custom-theme-set-variables
   'no-clown-fiesta
   `(pos-tip-foreground-color ,fg)
   `(pos-tip-background-color ,alt-bg)
-  `(ansi-color-names-vector [,gray ,red ,green ,gray-blue
-                             ,orange ,purple ,cyan ,white])))
+  `(ansi-color-names-vector [ ,gray ,red ,green ,gray-blue
+                              ,orange ,purple ,cyan ,white ])))
 
 (provide-theme 'no-clown-fiesta)
 

@@ -252,8 +252,9 @@ By default, Emacs includes a lot of UI elements that may make it more discoverab
 ** Theme
 
 #+BEGIN_SRC emacs-lisp
-  (use-package no-clown-fiesta
-    :config (load-theme 'no-clown-fiesta t))
+  (use-package no-clown-fiesta-theme
+    :config
+    (load-theme 'no-clown-fiesta t))
 #+END_SRC
 
 Use Solaire mode to distinguish between 'real' buffers and everything else.
