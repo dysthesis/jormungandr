@@ -274,7 +274,7 @@ A better looking modeline than the default, and it's lightweight enough for my t
       :ensure t
       :init (doom-modeline-mode 1)
       :custom
-      (doom-modeline-height 32)
+      (doom-modeline-height 30)
       (doom-modeline-bar-width 4)
       (doom-modeline-persp-name t)
       (doom-modeline-persp-icon t))
@@ -1947,28 +1947,29 @@ Show emphasis markers only when hovered over.
 :END:
 
 #+BEGIN_SRC emacs-lisp :tangle init.el
-    (use-package org-modern
-      :ensure t
-      :config
-      (menu-bar-mode -1)
-      (tool-bar-mode -1)
-      (scroll-bar-mode -1)
-      (org-indent-mode)
-      (dolist (face '(window-divider
-		      window-divider-first-pixel
-		      window-divider-last-pixel))
-	(face-spec-reset-face face)
-	(set-face-foreground face (face-attribute 'default :background)))
-      (set-face-background 'fringe (face-attribute 'default :background))
-      (setq org-hide-emphasis-markers t)
-      <<org-modern-list-bullets>>
-      <<org-modern-keyword-icons>>
-      <<org-modern-block-icons>>
-      (setq org-modern-block-fringe 6)
-      <<org-modern-agenda>>
-      <<org-ellipsis>>
-      (global-org-modern-mode)
-      (setq org-pretty-entities t))
+  (use-package org-modern
+    :ensure t
+    :config
+    (menu-bar-mode -1)
+    (tool-bar-mode -1)
+    (scroll-bar-mode -1)
+    (org-indent-mode)
+    (dolist (face '(window-divider
+  		  window-divider-first-pixel
+  		  window-divider-last-pixel))
+      (face-spec-reset-face face)
+      (set-face-foreground face (face-attribute 'default :background)))
+    (set-face-background 'fringe (face-attribute 'default :background))
+    (setq org-hide-emphasis-markers t)
+    (setq org-modern-fold-stars nil)
+    <<org-modern-list-bullets>>
+    <<org-modern-keyword-icons>>
+    <<org-modern-block-icons>>
+    (setq org-modern-block-fringe 6)
+    <<org-modern-agenda>>
+    <<org-ellipsis>>
+    (global-org-modern-mode)
+    (setq org-pretty-entities t))
 #+END_SRC
 
 **** Folded header ellipses
@@ -2063,6 +2064,14 @@ Show emphasis markers only when hovered over.
            :inverse-video t
            :foreground "#fab387")))
 #+END_SRC
+
+**** Org-modern indent
+
+#+begin_src emacs-lisp
+  (use-package org-modern-indent
+    :config ; add late to hook
+    (add-hook 'org-mode-hook #'org-modern-indent-mode 90))
+#+end_src
 
 *** Calendar highlighting
 
