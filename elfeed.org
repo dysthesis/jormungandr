@@ -1,0 +1,16 @@
+#+title: Elfeed
+
+* Elfeed :elfeed:
+** Computer science :cs:
+*** Security :security:
+
+**** [[https://morss.it/http://rss.sciencedirect.com/publication/science/01674048][AIS SIGSEC Computers & Security]]
+**** [[https://morss.it/http://link.springer.com/search.rss?facet-content-type=Article&facet-journal-id=10207&channel-name=International+Journal+of+Information+Security][International Journal of Information Security]]
+**** [[https://morss.it/http://rss.sciencedirect.com/publication/science/26662817][ScienceDirect Publication: Forensic Science International: Digital Investigation]]
+**** [[https://morss.it/http://rss.sciencedirect.com/publication/science/22142126][ScienceDirect Publication: Journal of Information Security and Applications]]
+**** [[https://academic.oup.com/rss/site_5188/advanceaccess_3053.xml][Journal of Cybersecurity Advance Access]]
+**** [[https://morss.it/http://export.arxiv.org/api/query?search_query=cat:cs.CR&start=0&max_results=300&sortBy=submittedDate&sortOrder=descending][ArXiv Cryptography and Security]]
+
+*** Operating systems :os:
+
+**** [[https://export.arxiv.org/api/query?search_query=cat:cs.OS&start=0&max_results=20&sortBy=submittedDate&sortOrder=descending][ArXiv OS]]

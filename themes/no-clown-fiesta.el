@@ -1,8 +1,10 @@
 ;;; no-clown-fiesta-theme.el --- Not-so-colorful-theme -*- lexical-binding: t -*-
 
 ;; URL: https://github.com/ranmaru22/no-clown-fiesta-theme.el
+;; Package-Version: 20230220.1019
+;; Package-Commit: e143cdfa7cecac6383328eca88586105f308bca9
 ;; Author: ranmaru22
-;; Version: 1.2
+;; Version: 1.1
 ;; Package-Requires: ((emacs "26.1") (autothemer "0.2"))
 
 ;; Copyright (c) 2022-2023 ranmaru22
@@ -178,7 +180,7 @@
   (tab-bar-tab-group-current  (:foreground fg :weight 'bold :underline t))
   (tab-bar-tab-inactive       (:foreground medium-gray))
   (tab-bar-tab-ungrouped      (:foreground medium-gray))
-  (tab-bar-tab-group-inactive (:foreground medium-gray :underline t))
+  (tab-bar-tab-group-inactive (:foreground medium-gray))
 
   ;; Font lock
   (font-lock-builtin-face           (:foreground cyan))

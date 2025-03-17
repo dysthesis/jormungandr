@@ -252,8 +252,8 @@ By default, Emacs includes a lot of UI elements that may make it more discoverab
 ** Theme
 
 #+BEGIN_SRC emacs-lisp
-  (use-package doom-themes
-    :config (load-theme 'doom-meltbus t))
+  (use-package no-clown-fiesta
+    :config (load-theme 'no-clown-fiesta t))
 #+END_SRC
 
 Use Solaire mode to distinguish between 'real' buffers and everything else.
@@ -730,6 +730,10 @@ A lighter-weight LSP client for Emacs, compared to =lsp-mode=.
     :config
     <<eglot-server-programs>>
     <<eglot-format-on-save>>)
+
+  (use-package eglot-booster
+  	:after eglot
+  	:config	(eglot-booster-mode))
 #+END_SRC
 
 *** Keybinds
@@ -1153,6 +1157,320 @@ Display a diff of the current file against =HEAD= in the gringe.
                              (format-mode-line (cons "" '(:eval (doom-modeline-segment--major-mode))))))))))
        (:eval (doom-modeline-segment--major-mode)))))
   (add-hook 'nov-mode-hook #'+nov-mode-setup)
+#+end_src
+
+* RSS reading
+:PROPERTIES:
+:HEADER-ARGS:EMACS-LISP: :noweb yes :tangle no
+:END:
+
+Emacs can become an RSS feed reader with the =elfeed= package.
+
+- =elfeed-search= is the menu buffer that displays all the entries of your feed.
+- =elfeed-show= is the buffer that displays the contents of an entry.
+
+  #+begin_src emacs-lisp :tangle init.el
+    (use-package elfeed
+      :after evil
+      :bind ("C-c e" . elfeed)
+      :config
+      <<elfeed-evil>>
+      <<elfeed-search-filter>>
+      <<elfeed-search-define-print-entry-function>>
+      <<elfeed-search-title-min-width>>
+      <<elfeed-show-mode-hooks>>
+      <<elfeed-show-title-face>>
+      <<elfeed-show-author-face>>
+      <<elfeed-show-entry-switch>>
+      <<elfeed-show-entry-delete>>
+      <<elfeed-show-define-refresh-function>>
+      <<elfeed-image-size>>
+      <<elfeed-better-wrap-heading>>
+      <<elfeed-show-refresh-function>>
+      <<elfeed-search-print-entry-function>>)
+#+end_src
+
+=elfeed-org= allows the declaration of RSS feed URLs using an Org syntax, which is more legible and convenient than the Emacs Lisp syntax that =elfeed= would otherwise use. It also allows for feeds defined under a subheading with some tags to inherit these tags.
+
+It is necessary to then declare to =elfeed-org= where it should find the list of feeds:
+
+#+begin_src emacs-lisp
+  (use-package elfeed-org
+    :custom
+    :after elfeed
+    :config (elfeed-org))
+#+end_src
+
+#+begin_src emacs-lisp
+  (use-package elfeed-link
+    :after elfeed-org)
+#+end_src
+
+** Evil keymaps
+
+#+begin_src emacs-lisp
+  (evil-set-initial-state 'elfeed-search-mode 'normal)
+  (evil-set-initial-state 'elfeed-show-mode   'normal)
+#+end_src
+
+** Filter
+
+RSS entries can clog up the =elfeed-search= view after a while. Therefore, set the default filter to only show entries no older than two weeks and unread.
+
+#+name:elfeed-search-filter
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq elfeed-search-filter "@2-week-ago +unread")
+#+end_src
+
+** Print entry function
+
+This function instructs =elfeed-search= on how to display each entry. This includes the specification of aspects such as column width for each entry's properties (such as its source, tags, title, etc.).
+
+Define the function as follows:
+#+name: elfeed-search-print-entry-function
+#+begin_src emacs-lisp :tangle no :noweb yes
+(defun +rss/elfeed-search-print-entry (entry)
+    "Print ENTRY to the buffer."
+    (let* ((elfeed-goodies/tag-column-width 30)
+           (elfeed-goodies/feed-source-column-width 30)
+           (elfeed-goodies/title-column-width 80) ;; Adjust this width as needed
+           (title (or (elfeed-meta entry :title) (elfeed-entry-title entry) ""))
+           (title-faces (elfeed-search--faces (elfeed-entry-tags entry)))
+           (feed (elfeed-entry-feed entry))
+           (feed-title
+            (when feed
+              (or (elfeed-meta feed :title) (elfeed-feed-title feed))))
+           (tags (mapcar #'symbol-name (elfeed-entry-tags entry)))
+           (tags-str (concat (mapconcat 'identity tags ",")))
+           (title-column (elfeed-format-column
+                          title (elfeed-clamp elfeed-goodies/title-column-width
+                                              elfeed-goodies/title-column-width
+                                              elfeed-goodies/title-column-width)
+                          :left))
+           (tag-column (elfeed-format-column
+                        tags-str (elfeed-clamp (length tags-str)
+                                               elfeed-goodies/tag-column-width
+                                               elfeed-goodies/tag-column-width)
+                        :left))
+           (feed-column (elfeed-format-column
+                         feed-title (elfeed-clamp elfeed-goodies/feed-source-column-width
+                                                  elfeed-goodies/feed-source-column-width
+                                                  elfeed-goodies/feed-source-column-width)
+                         :left)))
+
+      (insert (propertize feed-column 'face 'elfeed-search-feed-face) " ")
+      (insert (propertize title-column 'face title-faces 'kbd-help title) " ")
+      (insert (propertize tag-column 'face 'elfeed-search-tag-face))
+      (setq-local line-spacing 0.2)))
+#+end_src
+
+Then, instruct =elfeed-search= to use the previously defined function as the print-entry function.
+#+name:elfeed-search-define-print-entry-function
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq elfeed-search-print-entry-function '+rss/elfeed-search-print-entry)
+#+end_src
+
+** Minimum title width in search
+
+Define the minimum entry title width in =elfeed-search.= Modify this value if more or less title truncation is desired.
+
+#+name: elfeed-search-title-min-width
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq elfeed-search-title-min-width 80)
+#+end_src
+
+** Entry switch function
+
+Define how =elfeed= should switch to the feed entry buffer. The options are:
+
+- =switch-to-buffer=: display buffer in the selected window.
+- =pop-to-buffer=: display the buffer and select its window.
+
+#+name: elfeed-show-entry-switch
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq elfeed-show-entry-switch #'pop-to-buffer)
+#+end_src
+
+** Entry delete function
+
+Define how =elfeed= should exit the entry buffer.
+#+name: elfeed-show-entry-delete
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq elfeed-show-entry-delete #'+rss/delete-pane)
+#+end_src
+
+** =elfeed-show= faces
+*** Hooks
+
+#+name: elfeed-show-mode-hooks
+#+begin_src emacs-lisp
+(add-hook! 'elfeed-show-mode-hook (hide-mode-line-mode 1))
+(add-hook! 'elfeed-search-update-hook #'hide-mode-line-mode)
+#+end_src
+*** Title
+
+#+name: elfeed-show-title-face
+#+begin_src emacs-lisp
+(defface elfeed-show-title-face '((t (:weight ultrabold :slant italic :height 1.6)))
+  "title face in elfeed show buffer"
+  :group 'elfeed)
+#+end_src
+*** Author
+
+#+name: elfeed-show-author-face
+#+begin_src emacs-lisp
+(defface elfeed-show-author-face `((t (:weight light)))
+  "title face in elfeed show buffer"
+  :group 'elfeed)
+(set-face-attribute 'elfeed-search-title-face nil
+                    :foreground "white"
+                    :weight 'light)
+#+end_src
+
+
+** =elfeed-show= layout
+
+Create a custom function to use as the =elfeed-show-refresh-function= in order to adjust how =elfeed-show= looks.
+#+name:elfeed-show-refresh-function
+#+begin_src emacs-lisp :tangle no :noweb yes
+(defun +rss/elfeed-show-refresh--better-style ()
+    "Update the buffer to match the selected entry, using a mail-style."
+    (interactive)
+    (let* ((inhibit-read-only t)
+           (title (elfeed-entry-title elfeed-show-entry))
+           (date (seconds-to-time (elfeed-entry-date elfeed-show-entry)))
+           (author (elfeed-meta elfeed-show-entry :author))
+           (link (elfeed-entry-link elfeed-show-entry))
+           (tags (elfeed-entry-tags elfeed-show-entry))
+           (tagsstr (mapconcat #'symbol-name tags ", "))
+           (nicedate (format-time-string "%a, %e %b %Y %T %Z" date))
+           (content (elfeed-deref (elfeed-entry-content elfeed-show-entry)))
+           (type (elfeed-entry-content-type elfeed-show-entry))
+           (feed (elfeed-entry-feed elfeed-show-entry))
+           (feed-title (elfeed-feed-title feed))
+           (base (and feed (elfeed-compute-base (elfeed-feed-url feed)))))
+      (erase-buffer)
+      (insert "\n")
+      (insert (format "%s\n\n" (propertize title 'face 'elfeed-show-title-face)))
+      (insert (format "%s\t" (propertize feed-title 'face 'elfeed-search-feed-face)))
+      (when (and author elfeed-show-entry-author)
+        (insert (format "%s\n" (propertize author 'face 'elfeed-show-author-face))))
+      (insert (format "%s\n\n" (propertize nicedate 'face 'elfeed-log-date-face)))
+      (when tags
+        (insert (format "%s\n"
+                        (propertize tagsstr 'face 'elfeed-search-tag-face))))
+      ;; (insert (propertize "Link: " 'face 'message-header-name))
+      ;; (elfeed-insert-link link link)
+      ;; (insert "\n")
+      (cl-loop for enclosure in (elfeed-entry-enclosures elfeed-show-entry)
+               do (insert (propertize "Enclosure: " 'face 'message-header-name))
+               do (elfeed-insert-link (car enclosure))
+               do (insert "\n"))
+      (insert "\n")
+      (if content
+          (if (eq type 'html)
+              (elfeed-insert-html content base)
+            (insert content))
+        (insert (propertize "(empty)\n" 'face 'italic)))
+      (goto-char (point-min))))
+#+end_src
+
+Tell =elfeed= to use this function.
+#+name:elfeed-show-define-refresh-function
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq elfeed-show-refresh-function #'+rss/elfeed-show-refresh--better-style)
+#+end_src
+
+** Image size
+
+Define how big images should be displayed relative to the window containing it.
+#+name:elfeed-image-size
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq shr-max-image-proportion 0.7)
+#+end_src
+
+** Better wrap heading
+
+#+name: elfeed-better-wrap-heading
+#+begin_src emacs-lisp :tangle no :noweb yes
+  (defun +rss-elfeed-wrap-h-nicer (&rest _ignore)
+    "Enhances an elfeed entry's readability by wrapping it to a width of
+  `fill-column' and centering it with `visual-fill-column-mode'."
+    (setq-local truncate-lines nil
+                shr-width 120
+                next-screen-context-lines 4
+                visual-fill-column-width 81
+                visual-fill-column-center-text t
+                default-text-properties '(line-height 1.5))
+    (let ((inhibit-read-only t)
+          (inhibit-modification-hooks t))
+      (visual-fill-column-mode)
+      (setq-local shr-current-font '(:family "Lato" :weight 'medium :height 1.5))
+      (set-buffer-modified-p nil)))
+
+  (advice-add #'+rss-elfeed-wrap-h :override #'+rss-elfeed-wrap-h-nicer)
+#+end_src
+
+** Capture to Org-roam
+
+#+begin_src emacs-lisp
+(defun dysthesis/elfeed-capture-entry ()
+  (interactive)
+  ;; Check if we are in elfeed-show-mode
+  (if (eq major-mode 'elfeed-show-mode)
+      (let* ((entry elfeed-show-entry)  ; Get the current entry in elfeed-show
+             (link (elfeed-entry-link entry))
+             (title (elfeed-entry-title entry)))
+        ;; Initiate an Org-roam capture
+        (org-roam-capture- :keys "e" :node (org-roam-node-create :title title))
+        (insert link))  ; Insert only the URL
+    (message "Not in elfeed-show mode!")))
+#+end_src
+
+** Keybindings
+
+#+begin_src emacs-lisp
+  (use-package elfeed-search
+    :after elfeed
+    :bind (:map elfeed-search-mode-map
+                ([remap kill-this-buffer] . "q")
+                ([remap kill-buffer]      . "q"))
+    :config
+    (evil-define-key 'normal elfeed-search-mode-map
+      (kbd "SPC") nil
+      "q" #'+rss/quit
+      "e" #'elfeed-update
+      "r" #'elfeed-search-untag-all-unread
+      "u" #'elfeed-search-tag-all-unread
+      "s" #'elfeed-search-live-filter
+      (kbd "RET") #'elfeed-search-show-entry
+      "p" #'elfeed-show-pdf
+      "+" #'elfeed-search-tag-all
+      "-" #'elfeed-search-untag-all
+      "S" #'elfeed-search-set-filter
+      "b" #'elfeed-search-browse-url
+      "y" #'elfeed-search-yank))
+
+  (use-package elfeed-show
+    :after elfeed
+    :bind (:map elfeed-show-mode-map
+                ([remap kill-this-buffer] . "q")
+                ([remap kill-buffer]      . "q"))
+    :config
+    (evil-define-key '(normal motion) elfeed-show-mode-map
+      (kbd "SPC") nil
+      "q" #'+rss/delete-pane
+      "o" #'ace-link-elfeed
+      (kbd "RET") #'org-ref-elfeed-add
+      "n" #'elfeed-show-next
+      "N" #'elfeed-show-prev
+      "p" #'elfeed-show-pdf
+      "c" #'dysthesis/elfeed-capture-entry
+      "r" #'elfeed-show-refresh
+      "+" #'elfeed-show-tag
+      "-" #'elfeed-show-untag
+      "s" #'elfeed-show-new-live-search
+      "y" #'elfeed-show-yank))
 #+end_src
 
 * Org-mode
