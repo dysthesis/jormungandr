@@ -360,14 +360,33 @@
   ;; org-mode
   (org-default          (:foreground fg))
   (org-block            (:inherit 'fixed-pitch))
-  (org-level-1          (:foreground rainbow-1 :weight 'bold))
-  (org-level-2          (:foreground rainbow-2 :weight 'bold))
-  (org-level-3          (:foreground rainbow-3 :weight 'bold))
-  (org-level-4          (:foreground rainbow-4 :weight 'bold))
-  (org-level-5          (:foreground rainbow-5 :weight 'bold))
-  (org-level-6          (:foreground rainbow-6 :weight 'bold))
-  (org-level-7          (:foreground rainbow-7 :weight 'bold))
-  (org-level-8          (:foreground rainbow-8 :weight 'bold))
+
+  (org-document-title (:height 2.0
+			       :weight 'heavy))
+  (outline-1 (:height 1.5
+		      :weight 'bold))
+  (outline-2 (:height 1.4
+		      :weight 'bold))
+  (outline-3 (:height 1.3
+		      :weight 'bold))
+  (outline-4 (:height 1.2
+		      :weight 'bold))
+  (outline-5 (:height 1.1
+		      :weight 'bold))
+  (outline-6 (:height 1.0
+		      :weight 'bold))
+  (outline-7 (:height 1.0
+		      :weight 'normal))
+  (outline-8 (:height 1.0
+		      :weight 'normal))
+  ;; (org-level-1          (:foreground rainbow-1 :weight 'bold))
+  ;; (org-level-2          (:foreground rainbow-2 :weight 'bold))
+  ;; (org-level-3          (:foreground rainbow-3 :weight 'bold))
+  ;; (org-level-4          (:foreground rainbow-4 :weight 'bold))
+  ;; (org-level-5          (:foreground rainbow-5 :weight 'bold))
+  ;; (org-level-6          (:foreground rainbow-6 :weight 'bold))
+  ;; (org-level-7          (:foreground rainbow-7 :weight 'bold))
+  ;; (org-level-8          (:foreground rainbow-8 :weight 'bold))
   (org-quote            (:foreground gray-blue))
   (org-code             (:foreground green))
   (org-verbatim         (:foreground blue))
