@@ -1966,11 +1966,10 @@ Show emphasis markers only when hovered over.
       (set-face-foreground face (face-attribute 'default :background)))
     (set-face-background 'fringe (face-attribute 'default :background))
     (setq org-hide-emphasis-markers t)
-    (setq org-modern-fold-stars nil)
     <<org-modern-list-bullets>>
     <<org-modern-keyword-icons>>
     <<org-modern-block-icons>>
-    (setq org-modern-block-fringe 6)
+    (setq org-modern-block-fringe 4)
     <<org-modern-agenda>>
     <<org-ellipsis>>
     (global-org-modern-mode)
@@ -2074,7 +2073,8 @@ Show emphasis markers only when hovered over.
 
 #+begin_src emacs-lisp
   (use-package org-modern-indent
-    :config ; add late to hook
+    :after org-modern
+    :config
     (add-hook 'org-mode-hook #'org-modern-indent-mode 90))
 #+end_src
 
