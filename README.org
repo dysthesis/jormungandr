@@ -1049,13 +1049,6 @@ Display a diff of the current file against =HEAD= in the gringe.
      "g a" 'anaconda-mode-find-assignments
      "g f" 'anaconda-mode-find-file
      "g u" 'anaconda-mode-find-references))
-
-  (use-package lsp-pyright
-    :defer t
-    :after python
-    :init
-    (when (executable-find "basedpyright")
-      (setq lsp-pyright-langserver-command "basedpyright")))
 #+end_src
 
 * Bibliography
