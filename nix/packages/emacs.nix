@@ -15,6 +15,7 @@ let
 
   npins = import ./npins;
 
+  # TODO: make this native compile plugins
   elisp =
     src: file:
     pkgs.runCommand "${file}.el" { } ''
