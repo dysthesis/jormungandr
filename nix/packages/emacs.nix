@@ -45,7 +45,7 @@
         --eval "(native-compile \"$out/init.el\")"
     '';
 
-  package = baseEmacs (old: {
+  package = baseEmacs.overrideAttrs (old: {
     postInstall =
       # bash
       ''
