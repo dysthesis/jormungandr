@@ -2,7 +2,6 @@
 #+STARTUP: fold
 #+PROPERTY: header-args:emacs-lisp :tangle init.el
 
-
 * Package manager
 ** Package.el
 
@@ -592,7 +591,7 @@ To use this,
      "f f" '(consult-fd :wk "Fd")
      "f g" '(consult-ripgrep :wk "Ripgrep")
      "f l" '(consult-line :wk "Find line")
-     "f i" '(consult-imenu "Imenu"))
+     "f i" '(consult-imenu :wk "Imenu"))
     ;; Optionally configure the register formatting. This improves the register
     ;; preview for `consult-register', `consult-register-load',
     ;; `consult-register-store' and the Emacs built-ins.
@@ -2157,7 +2156,7 @@ Highlight each day in the calendar according to the number of tasks due that day
    '(("d" " Default" plain
       "%?"
       :if-new (file+head "${slug}.org"
-                         "#+title: ${title}\n#+filetags: :new:\n#+STARTUP: latexpreview")
+                         "#+title: ${title}\n#+STARTUP: latexpreview")
       :immediate-finish t
       :unnarrowed t)
      ("i" "󰆼 Index note" plain
@@ -2441,3 +2440,10 @@ This package optimises the garbage collector strategy for better performance.
     :config (gcmh-mode 1))
 #+end_src
 
+** Org-protocol
+
+#+begin_src emacs-lisp
+  (use-package org-protocol
+    :config
+    (server-start))
+#+end_src
