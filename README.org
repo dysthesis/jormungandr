@@ -1958,6 +1958,7 @@ Show emphasis markers only when hovered over.
       (set-face-foreground face (face-attribute 'default :background)))
     (set-face-background 'fringe (face-attribute 'default :background))
     (setq org-hide-emphasis-markers t)
+    (setq org-modern-star 'replace)
     <<org-modern-list-bullets>>
     <<org-modern-keyword-icons>>
     <<org-modern-block-icons>>
