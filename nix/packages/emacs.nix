@@ -1,5 +1,5 @@
 {
-  no-clown-fiesta-theme,
+  gruber-darkest-theme,
   pkgs,
   lib,
   emacs-unstable-pgtk,
@@ -67,7 +67,7 @@
         use-package
         autothemer
       ];
-    override = epkgs: epkgs // builtNpins // {inherit no-clown-fiesta-theme;};
+    override = epkgs: epkgs // builtNpins // {inherit gruber-darkest-theme;};
   };
   deps = with pkgs; [
     fd

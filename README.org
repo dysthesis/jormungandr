@@ -253,7 +253,7 @@ By default, Emacs includes a lot of UI elements that may make it more discoverab
 #+BEGIN_SRC emacs-lisp
   (use-package doom-themes
     :config
-    (load-theme 'doom-tokyo-night t))
+    (load-theme 'doom-tomorrow-night t))
 #+END_SRC
 
 Use Solaire mode to distinguish between 'real' buffers and everything else.
@@ -314,38 +314,39 @@ Centre content when in Org-mode to comfortably fit everything within my field of
 Allow the use of both variable pitch and fixed pitch fonts wherever appropriate.
 
 #+BEGIN_SRC emacs-lisp
-    (use-package mixed-pitch
-      :ensure t
-      :hook
-      ;; You might want to enable it only in org-mode or both text-mode and org-mode
-      ((org-mode) . mixed-pitch-mode)
-      ((markdown-mode) . mixed-pitch-mode)
-      :config
-      (setq mixed-pitch-face 'variable-pitch)
-      (setq mixed-pitch-fixed-pitch-faces
-            (append mixed-pitch-fixed-pitch-faces
-                    '(org-table
-                      org-code
-                      org-property-value
-                      org-block
-                      org-block-begin-line
-                      org-block-end-line
-                      org-meta-line
-                      org-document-info-keyword
-                      org-tag
-                      org-time-grid
-                      org-todo
-                      org-done
-                      org-agenda-date
-                      org-date
-                      org-drawer
-                      org-modern-tag
-                      org-modern-done
-                      org-modern-label
-                      org-scheduled
-                      org-scheduled-today
-                      neo-file-link-face
-                      org-scheduled-previously))))
+  (use-package mixed-pitch
+    :ensure t
+    :hook
+    ;; You might want to enable it only in org-mode or both text-mode and org-mode
+    ((org-mode) . mixed-pitch-mode)
+    ((markdown-mode) . mixed-pitch-mode)
+    :config
+    (setq mixed-pitch-face 'variable-pitch)
+    (setq mixed-pitch-fixed-pitch-faces
+          (append mixed-pitch-fixed-pitch-faces
+                  '(org-table
+                    org-code
+                    org-property-value
+  		  org-special-keyword
+                    org-block
+                    org-block-begin-line
+                    org-block-end-line
+                    org-meta-line
+                    org-document-info-keyword
+                    org-tag
+                    org-time-grid
+                    org-todo
+                    org-done
+                    org-agenda-date
+                    org-date
+                    org-drawer
+                    org-modern-tag
+                    org-modern-done
+                    org-modern-label
+                    org-scheduled
+                    org-scheduled-today
+                    neo-file-link-face
+                    org-scheduled-previously))))
 #+END_SRC
 
 ** Ligatures
@@ -1323,7 +1324,6 @@ Define how =elfeed= should exit the entry buffer.
                     :foreground "white"
                     :weight 'light)
 #+end_src
-
 
 ** =elfeed-show= layout
 
