@@ -26,6 +26,10 @@ An easier way to define keybindings in Emacs.
   (use-package general
     :demand t
     :config
+    (general-create-definer start/leader-keys
+      :keymaps '(normal insert visual emacs)
+      :prefix "SPC"
+      :non-normal-prefix "C-SPC")
     (general-evil-setup)
     (general-define-key
      :states '(normal visual insert emacs)
@@ -146,7 +150,7 @@ Some of the Emacs defaults aren't great.
     :init
     (setq-default fill-column 80)
     (setq pixel-scroll-precision-large-scroll-height 40.0)
-    (setq pixel-scroll-precision-mode 1)
+    (pixel-scroll-precision-mode 1)
     (setq enable-recursive-minibuffers t)
     (setq backup-by-copying t)
     (setq sentence-end-double-space nil)
@@ -431,7 +435,7 @@ Allow the use of both variable pitch and fixed pitch fonts wherever appropriate.
   :config
   (nerd-icons-completion-mode)
   :hook
-  ('marginalia-mode-hook . 'nerd-icons-completion-marginalia-setup))
+  (marginalia-mode-hook . nerd-icons-completion-marginalia-setup))
 #+end_src
 
 ** Orderless
@@ -462,6 +466,7 @@ Allow the use of both variable pitch and fixed pitch fonts wherever appropriate.
     ;; Optional customizations
     :ensure t
     :custom
+    (corfu-popupinfo-mode 1)
     (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
     (corfu-auto t)                 ;; Enable auto completion
     (corfu-auto-prefix 2)          ;; Minimum length of prefix for auto completion.
@@ -647,7 +652,7 @@ Automatically insert the corresponding closing delimiter upon typing an opening 
 #+BEGIN_SRC emacs-lisp
   (use-package smartparens
     :ensure smartparens  ;; install the package
-    :hook (prog-mode text-mode markdown-mode) ;; add `smartparens-mode` to these hooks
+    :hook ((prog-mode text-mode markdown-mode) . smartparens-mode) ;; add `smartparens-mode` to these hooks
     :general
     ("M-h" 'sp-backward-slurp-sexp)
     ("M-l" 'sp-forward-slurp-sexp)
@@ -1010,14 +1015,16 @@ Display a diff of the current file against =HEAD= in the gringe.
     :hook
     (zig-mode . eglot-ensure)
     :config
-    (add-to-list 'eglot-server-programs '(zig-mode . ("/usr/bin/zls"
-   												   :initializationOptions (:zig_exe_path (executable-find "zig")))))
+    (add-to-list 'eglot-server-programs
+  	       '(zig-mode . ((executable-find "zls")
+   			     :initializationOptions
+  			     (:zig_exe_path (executable-find "zig")))))
     (if (>= emacs-major-version 28)
         (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
       (progn
         (defun colorize-compilation-buffer ()
        	(let ((inhibit-read-only t))
-     		 (ansi-color-apply-on-region compilation-filter-start (point))))
+     	  (ansi-color-apply-on-region compilation-filter-start (point))))
         (add-hook 'compilation-filter-hook 'colorize-compilation-buffer))))
 #+end_src
 
@@ -1172,6 +1179,7 @@ Emacs can become an RSS feed reader with the =elfeed= package.
       :after evil
       :bind ("C-c e" . elfeed)
       :config
+      <<elfeed-feeds>>
       <<elfeed-evil>>
       <<elfeed-search-filter>>
       <<elfeed-search-define-print-entry-function>>
@@ -1188,21 +1196,40 @@ Emacs can become an RSS feed reader with the =elfeed= package.
       <<elfeed-search-print-entry-function>>)
 #+end_src
 
-=elfeed-org= allows the declaration of RSS feed URLs using an Org syntax, which is more legible and convenient than the Emacs Lisp syntax that =elfeed= would otherwise use. It also allows for feeds defined under a subheading with some tags to inherit these tags.
+** Feeds
 
-It is necessary to then declare to =elfeed-org= where it should find the list of feeds:
-
-#+begin_src emacs-lisp
-  (use-package elfeed-org
-    :custom
-    :after elfeed
-    :config (elfeed-org))
-#+end_src
-
-#+begin_src emacs-lisp
-  (use-package elfeed-link
-    :after elfeed-org)
-#+end_src
+#+name: elfeed-feeds
+#+BEGIN_SRC emacs-lisp
+    ;; Somewhere in your .emacs file
+    (setq elfeed-feeds
+          '("http://nullprogram.com/feed/"
+            "https://matklad.github.io/feed.xml"
+    	"https://xeiaso.net/blog.rss"
+    	"https://sthbrx.github.io/rss.xml"
+    	"https://morss.it/without.boats/index.xml"
+    	"https://kristoff.it/index.xml"
+    	"https://fasterthanli.me/index.xml"
+    	"https://ayats.org/feed.xml"
+    	"https://morss.it/jeremykun.com/feed/"
+    	"https://morss.it/mitchellh.com/feed.xml"
+    	"https://blog.regehr.org/feed"
+  	"https://lobste.rs/t/rust,zig,c,osdev,nix,emacs,vim,security,performance,plt,distributed,cryptography,hardware,science,c++,haskell,elixir,linux,android,privacy,reversing,virtualization,compilers,editors,vcs.rss"
+    	"https://hnrss.org/frontpage"
+    	"https://mmapped.blog/feed.xml"
+    	"https://smallcultfollowing.com/babysteps//atom.xml"
+    	"https://justine.lol/rss.xml"
+    	"https://blog.cryptographyengineering.com/feed/"
+    	"https://steveklabnik.com/writing"
+    	"https://awesomekling.github.io/feed.xml"
+    	"https://dataswamp.org/~solene/rss.xml"
+    	"https://blogsystem5.substack.com/feed"
+    	"https://scottaaronson.blog/"
+    	"https://eli.thegreenplace.net/feeds/all.atom.xml"
+    	"https://lemire.me/blog/feed/"
+    	"https://syst3mfailure.io/feed.xml"
+    	"https://mcyoung.xyz/feed"
+    	"https://eli.thegreenplace.net/feeds/all.atom.xml"))
+#+END_SRC
 
 ** Evil keymaps
 
