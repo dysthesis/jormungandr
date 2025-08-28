@@ -5,7 +5,7 @@
 * Package manager
 ** Package.el
 
-Use the built-in package manager.
+Use the built-in package manager, =package.el=.
 
 #+begin_src emacs-lisp
   (require 'use-package-ensure) ;; Load use-package-always-ensure
@@ -193,8 +193,8 @@ Define my preferred fixed pitch and variable pitch fonts.
 "JBMono Nerd Font" is a customised build of JetBrainsMono Nerd Font with some font features enabled, as Emacs doesn't seem to have the ability to enable it by itself.
 
 #+BEGIN_SRC emacs-lisp
-  (let ((my-font-height (if (string= (system-name) "deimos") 100 70))
-        (my-font-size   (if (string= (system-name) "deimos") 10 7)))
+  (let ((my-font-height (if (string= (system-name) "deimos") 90 70))
+        (my-font-size   (if (string= (system-name) "deimos") 9 7)))
     (set-face-attribute 'default nil :font "JBMono Nerd Font" :height my-font-height)
     (set-fontset-font t nil (font-spec :size my-font-size :name "JBMono Nerd Font"))
     (setq-default line-spacing 0.2)
@@ -207,7 +207,7 @@ Define my preferred fixed pitch and variable pitch fonts.
 Scale the variable pitch font to match the fixed pitch font. Otherwise, it looks slightly smaller.
 
 #+BEGIN_SRC emacs-lisp
-  (add-to-list 'face-font-rescale-alist '("SF Pro Display" . 1.2))
+  (add-to-list 'face-font-rescale-alist '("SF Pro Display" . 1.1))
 #+END_SRC
 
 *** Zooming In/Out
@@ -251,9 +251,9 @@ By default, Emacs includes a lot of UI elements that may make it more discoverab
 ** Theme
 
 #+BEGIN_SRC emacs-lisp
-  (use-package no-clown-fiesta-theme
+  (use-package doom-themes
     :config
-    (load-theme 'no-clown-fiesta t))
+    (load-theme 'doom-tokyo-night t))
 #+END_SRC
 
 Use Solaire mode to distinguish between 'real' buffers and everything else.
