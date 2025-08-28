@@ -1182,6 +1182,7 @@ Emacs can become an RSS feed reader with the =elfeed= package.
       <<elfeed-feeds>>
       <<elfeed-evil>>
       <<elfeed-search-filter>>
+      <<elfeed-search-print-entry-function>>
       <<elfeed-search-define-print-entry-function>>
       <<elfeed-search-title-min-width>>
       <<elfeed-show-mode-hooks>>
@@ -1192,8 +1193,7 @@ Emacs can become an RSS feed reader with the =elfeed= package.
       <<elfeed-show-define-refresh-function>>
       <<elfeed-image-size>>
       <<elfeed-better-wrap-heading>>
-      <<elfeed-show-refresh-function>>
-      <<elfeed-search-print-entry-function>>)
+      <<elfeed-show-refresh-function>>)
 #+end_src
 
 ** Feeds
@@ -1357,52 +1357,47 @@ Define how =elfeed= should exit the entry buffer.
 Create a custom function to use as the =elfeed-show-refresh-function= in order to adjust how =elfeed-show= looks.
 #+name:elfeed-show-refresh-function
 #+begin_src emacs-lisp :tangle no :noweb yes
-(defun +rss/elfeed-show-refresh--better-style ()
-    "Update the buffer to match the selected entry, using a mail-style."
-    (interactive)
-    (let* ((inhibit-read-only t)
-           (title (elfeed-entry-title elfeed-show-entry))
-           (date (seconds-to-time (elfeed-entry-date elfeed-show-entry)))
-           (author (elfeed-meta elfeed-show-entry :author))
-           (link (elfeed-entry-link elfeed-show-entry))
-           (tags (elfeed-entry-tags elfeed-show-entry))
-           (tagsstr (mapconcat #'symbol-name tags ", "))
-           (nicedate (format-time-string "%a, %e %b %Y %T %Z" date))
-           (content (elfeed-deref (elfeed-entry-content elfeed-show-entry)))
-           (type (elfeed-entry-content-type elfeed-show-entry))
-           (feed (elfeed-entry-feed elfeed-show-entry))
-           (feed-title (elfeed-feed-title feed))
-           (base (and feed (elfeed-compute-base (elfeed-feed-url feed)))))
-      (erase-buffer)
-      (insert "\n")
-      (insert (format "%s\n\n" (propertize title 'face 'elfeed-show-title-face)))
-      (insert (format "%s\t" (propertize feed-title 'face 'elfeed-search-feed-face)))
-      (when (and author elfeed-show-entry-author)
-        (insert (format "%s\n" (propertize author 'face 'elfeed-show-author-face))))
-      (insert (format "%s\n\n" (propertize nicedate 'face 'elfeed-log-date-face)))
-      (when tags
-        (insert (format "%s\n"
-                        (propertize tagsstr 'face 'elfeed-search-tag-face))))
-      ;; (insert (propertize "Link: " 'face 'message-header-name))
-      ;; (elfeed-insert-link link link)
-      ;; (insert "\n")
-      (cl-loop for enclosure in (elfeed-entry-enclosures elfeed-show-entry)
-               do (insert (propertize "Enclosure: " 'face 'message-header-name))
-               do (elfeed-insert-link (car enclosure))
-               do (insert "\n"))
-      (insert "\n")
-      (if content
-          (if (eq type 'html)
-              (elfeed-insert-html content base)
-            (insert content))
-        (insert (propertize "(empty)\n" 'face 'italic)))
-      (goto-char (point-min))))
-#+end_src
-
-Tell =elfeed= to use this function.
-#+name:elfeed-show-define-refresh-function
-#+begin_src emacs-lisp :tangle no :noweb yes
-(setq elfeed-show-refresh-function #'+rss/elfeed-show-refresh--better-style)
+    (defun +rss/elfeed-show-refresh--better-style ()
+        "Update the buffer to match the selected entry, using a mail-style."
+        (interactive)
+        (let* ((inhibit-read-only t)
+               (title (elfeed-entry-title elfeed-show-entry))
+               (date (seconds-to-time (elfeed-entry-date elfeed-show-entry)))
+               (author (elfeed-meta elfeed-show-entry :author))
+               (link (elfeed-entry-link elfeed-show-entry))
+               (tags (elfeed-entry-tags elfeed-show-entry))
+               (tagsstr (mapconcat #'symbol-name tags ", "))
+               (nicedate (format-time-string "%a, %e %b %Y %T %Z" date))
+               (content (elfeed-deref (elfeed-entry-content elfeed-show-entry)))
+               (type (elfeed-entry-content-type elfeed-show-entry))
+               (feed (elfeed-entry-feed elfeed-show-entry))
+               (feed-title (elfeed-feed-title feed))
+               (base (and feed (elfeed-compute-base (elfeed-feed-url feed)))))
+          (erase-buffer)
+          (insert "\n")
+          (insert (format "%s\n\n" (propertize title 'face 'elfeed-show-title-face)))
+          (insert (format "%s\t" (propertize feed-title 'face 'elfeed-search-feed-face)))
+          (when (and author elfeed-show-entry-author)
+            (insert (format "%s\n" (propertize author 'face 'elfeed-show-author-face))))
+          (insert (format "%s\n\n" (propertize nicedate 'face 'elfeed-log-date-face)))
+          (when tags
+            (insert (format "%s\n"
+                            (propertize tagsstr 'face 'elfeed-search-tag-face))))
+          ;; (insert (propertize "Link: " 'face 'message-header-name))
+          ;; (elfeed-insert-link link link)
+          ;; (insert "\n")
+          (cl-loop for enclosure in (elfeed-entry-enclosures elfeed-show-entry)
+                   do (insert (propertize "Enclosure: " 'face 'message-header-name))
+                   do (elfeed-insert-link (car enclosure))
+                   do (insert "\n"))
+          (insert "\n")
+          (if content
+              (if (eq type 'html)
+                  (elfeed-insert-html content base)
+                (insert content))
+            (insert (propertize "(empty)\n" 'face 'italic)))
+          (goto-char (point-min))))
+  (setq elfeed-show-refresh-function #'+rss/elfeed-show-refresh--better-style)
 #+end_src
 
 ** Image size
