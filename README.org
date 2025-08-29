@@ -276,7 +276,16 @@ By default, Emacs includes a lot of UI elements that may make it more discoverab
     :config
     (load-theme 'doom-tomorrow-night t))
 
+  ;; (use-package gruvbox-theme
+  ;;   :config
+  ;;   (load-theme 'gruvbox-dark-hard t))
+
+  ;; (use-package stimmung-themes
+  ;;   :config (stimmung-themes-load-dark))
+
   ;; (use-package tao-theme
+  ;;   :custom
+  ;;   (tao-theme-sepia-depth 20)
   ;;   :config
   ;;   (load-theme 'tao-yin t))
 
@@ -1544,6 +1553,7 @@ Define how big images should be displayed relative to the window containing it.
     (org-cite-follow-processor 'citar)
     (org-cite-activate-processor 'citar)
     :config
+    <<org-fonts>>
     <<org-latex-config>>)
 #+END_SRC
 
@@ -1981,6 +1991,23 @@ Taken from [[https://github.com/doomemacs/doomemacs/blob/311ad23fd410f976f66c40f
 #+END_SRC
 
 ** Appearance
+*** Font
+
+#+name: org-fonts
+#+BEGIN_SRC emacs-lisp :noweb yes :tangle no
+  (custom-theme-set-faces
+   'user
+   '(org-level-1 ((t (:inherit default :height 1.5  :weight extra-bold))))
+   '(org-level-2 ((t (:inherit default :height 1.4  :weight extra-bold))))
+   '(org-level-3 ((t (:inherit default :height 1.3  :weight bold))))
+   '(org-level-4 ((t (:inherit default :height 1.25 :weight semi-bold))))
+   '(org-level-5 ((t (:inherit default :height 1.2  :weight normal))))
+   '(org-level-6 ((t (:inherit default :height 1.15 :weight normal))))
+   '(org-level-7 ((t (:inherit default :height 1.1  :weight normal))))
+   '(org-level-8 ((t (:inherit default :height 1.05 :weight normal))))
+   '(org-document-title ((t (:height 2.0 :weight heavy)))))
+#+END_SRC
+
 *** Hide emphasis markers
 
 Show emphasis markers only when hovered over.
