@@ -392,6 +392,7 @@ Allow the use of both variable pitch and fixed pitch fonts wherever appropriate.
       :custom (hl-todo-keyword-faces '(("TODO" warning bold)
                                        ("FIXME" error bold)
                                        ("HACK" font-lock-constant-face)
+                                       ("PERF" font-lock-constant-face)
                                        ("NOTE" success bold)
                                        ("REVIEW" font-lock-keyword-face bold)
                                        ("DEPRECATED" font-lock-doc-face bold))))
