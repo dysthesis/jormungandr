@@ -1,10 +1,11 @@
 {
-  gruber-darkest-theme,
+  oxocarbon-theme,
   pkgs,
   lib,
   emacs-unstable-pgtk,
   emacsWithPackagesFromUsePackage,
   runCommand,
+  ...
 }: let
   baseEmacs = emacs-unstable-pgtk;
   inherit (lib.babel.pkgs) mkWrapper;
@@ -67,7 +68,7 @@
         use-package
         autothemer
       ];
-    override = epkgs: epkgs // builtNpins // {inherit gruber-darkest-theme;};
+    override = epkgs: epkgs // builtNpins // {inherit oxocarbon-theme;};
   };
   deps = with pkgs; [
     fd

@@ -255,18 +255,50 @@ By default, Emacs includes a lot of UI elements that may make it more discoverab
 ** Theme
 
 #+BEGIN_SRC emacs-lisp
+  ;; (use-package catppuccin-theme
+  ;;   :ensure t
+  ;;   :config
+  ;;   (setq catppuccin-flavor 'mocha)
+  ;;   (catppuccin-set-color 'base "#000000") 
+  ;;   (catppuccin-set-color 'text "#ffffff")
+  ;;   (catppuccin-set-color 'mantle "#0f0f0f")
+  ;;   (catppuccin-set-color 'crust "#1f1f1f")
+  ;;   (load-theme 'catppuccin t)
+  ;;   (catppuccin-reload))
+
+  ;; (use-package kanagawa-themes
+  ;;   :config
+  ;;   (setq kanagawa-themes-custom-colors '((bg "#000000")
+  ;; 					(fg "#ffffff")))
+  ;;   (load-theme 'kanagawa-dragon t))
+
   (use-package doom-themes
     :config
     (load-theme 'doom-tomorrow-night t))
+
+  ;; (use-package tao-theme
+  ;;   :config
+  ;;   (load-theme 'tao-yin t))
+
+  ;; (use-package oxocarbon-theme
+  ;;   :config
+  ;;   (load-theme 'oxocarbon t))
+
+  ;; (use-package nordic-night-theme
+  ;;   :ensure t
+  ;;   :config
+
+  ;;   ;; Use this for the darker version
+  ;;   (load-theme 'nordic-midnight t))
 #+END_SRC
 
-Use Solaire mode to distinguish between 'real' buffers and everything else.
+  Use Solaire mode to distinguish between 'real' buffers and everything else.
 
-#+BEGIN_SRC emacs-lisp
-    (use-package solaire-mode
-      :ensure t
-      :config
-      (solaire-global-mode +1))
+ #+BEGIN_SRC emacs-lisp
+      (use-package solaire-mode
+        :ensure t
+        :config
+        (solaire-global-mode +1))
 #+END_SRC
 
 ** Modeline
@@ -2462,12 +2494,4 @@ This package optimises the garbage collector strategy for better performance.
   (use-package gcmh
     :ensure t
     :config (gcmh-mode 1))
-#+end_src
-
-** Org-protocol
-
-#+begin_src emacs-lisp
-  (use-package org-protocol
-    :config
-    (server-start))
 #+end_src

@@ -5,7 +5,7 @@
 }: let
   inherit (pkgs) callPackage;
 in rec {
-  jormungandr = callPackage ./emacs.nix {inherit lib pkgs gruber-darkest-theme;};
-  gruber-darkest-theme = callPackage ./gruber-darkest-theme.nix {};
+  jormungandr = callPackage ./emacs.nix {inherit lib pkgs oxocarbon-theme;};
+  oxocarbon-theme = callPackage ./oxocarbon-theme.nix {};
   default = jormungandr;
 }
