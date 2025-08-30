@@ -40,9 +40,9 @@
   (unmuted          "#bbc1c6" "#686868")
   (muted            "#525252" "#ffffff")
   (dark-green       "#03302F" "#F00000")
-  (overlay          "#292929" "#ffffff")
-  (surface          "#161616" "#ffffff")
-  (base             "#131313" "#ffffff"))
+  (overlay          "#131313" "#ffffff")
+  (surface          "#0f0f0f" "#ffffff")
+  (base             "#080808" "#ffffff"))
 
  ;; Customize faces
  ((default                              (:background surface :foreground text))
