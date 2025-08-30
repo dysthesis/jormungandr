@@ -272,9 +272,15 @@ By default, Emacs includes a lot of UI elements that may make it more discoverab
   ;; 					(fg "#ffffff")))
   ;;   (load-theme 'kanagawa-dragon t))
 
-  (use-package doom-themes
+  ;; (use-package doom-themes
+  ;;   :config
+  ;;   (load-theme 'doom-tomorrow-night t))
+
+  (use-package autothemer)
+  (use-package oxocarbon-theme
     :config
-    (load-theme 'doom-tomorrow-night t))
+    (require 'autothemer)
+    (load-theme 'oxocarbon t))
 
   ;; (use-package gruvbox-theme
   ;;   :config
@@ -1539,7 +1545,7 @@ Define how big images should be displayed relative to the window containing it.
 #+BEGIN_SRC emacs-lisp :noweb yes :tangle init.el
   (use-package org
     :ensure nil
-    :after citar
+    :after (citar oxocarbon-theme)
     :general
     ("C-c c" 'org-capture)
     ("S-RET" 'org-open-at-point)
@@ -2522,3 +2528,12 @@ This package optimises the garbage collector strategy for better performance.
     :ensure t
     :config (gcmh-mode 1))
 #+end_src
+
+** Rainbow mode
+
+Visualise colour codes.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package rainbow-mode
+    :hook (emacs-lisp-mode . rainbow-mode))
+#+END_SRC
