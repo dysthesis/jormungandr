@@ -1144,7 +1144,7 @@ Display a diff of the current file against =HEAD= in the gringe.
     :ensure t
     :demand t
     :custom
-    (citar-bibliography '("~/Documents/Org/Library.bib"))
+    (citar-bibliography '("~/Library/Library.bib"))
     :hook
     ((org-mode LaTeX-mode) . citar-capf-setup)
     :general
@@ -2392,9 +2392,9 @@ Add a creation date and maintain a last edited date for each Org-roam node.
     (setq
      org-ref-get-pdf-filename-function
      (lambda (key) (car (bibtex-completion-find-pdf key)))
-     org-ref-default-bibliography '("~/Documents/Org/Library.bib") 
+     org-ref-default-bibliography '("~/Library/Library.bib") 
      ;;org-ref-bibliography-notes "~/Org/Roam/Literature/bibnotes.org"
-     org-ref-pdf-directory "~/Documents/Org/Library/files"
+     org-ref-pdf-directory "~/Library/Files"
      org-ref-note-title-format "* %y - %t\n :PROPERTIES:\n  :Custom_ID: %k\n  :NOTER_DOCUMENT: %F\n :ROAM_KEY: cite:%k\n  :AUTHOR: %9a\n  :JOURNAL: %j\n  :YEAR: %y\n  :VOLUME: %v\n  :PAGES: %p\n  :DOI: %D\n  :URL: %U\n :END:\n\n"
      org-ref-notes-directory "~/Documents/Org/Roam/Literature/"
      org-ref-notes-function 'orb-edit-notes)
@@ -2402,7 +2402,7 @@ Add a creation date and maintain a last edited date for each Org-roam node.
     (setq
      bibtex-completion-notes-path org-ref-notes-directory
      bibtex-completion-bibliography org-ref-default-bibliography
-     bibtex-completion-library-path "~/Documents/Org/Library/files/"
+     bibtex-completion-library-path "~/Library/Files/"
      bibtex-completion-pdf-field "file"
      bibtex-completion-notes-template-multiple-files
      (concat
