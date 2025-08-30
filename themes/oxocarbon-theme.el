@@ -306,7 +306,7 @@
   (ivy-confirm-face                             (:foreground pine))
 
   (vertico-multiline                            (:background base :foreground text :distant-foreground text))
-  (vertico-group-title                          (:foreground subtle :weight 'semi-bold :height 180))
+  (vertico-group-title                          (:foreground subtle :weight 'bold))
   (vertico-group-separator                      (:foreground muted :strike-through t))
   (vertico-current                              (:background dark-green :distant-foreground text :foreground text))
 
