@@ -817,10 +817,6 @@ A lighter-weight LSP client for Emacs, compared to =lsp-mode=.
     :config
     <<eglot-server-programs>>
     <<eglot-format-on-save>>)
-
-  (use-package eglot-booster
-  	:after eglot
-  	:config	(eglot-booster-mode))
 #+END_SRC
 
 *** Keybinds
@@ -854,7 +850,8 @@ A lighter-weight LSP client for Emacs, compared to =lsp-mode=.
               (add-hook 'before-save-hook 'eglot-format nil t)))
 #+END_SRC
 
-*** COMMENT Eglot-booster
+*** Eglot-booster
+
 Improve the performance of Eglot. This requires the installation of [[https://github.com/blahgeek/emacs-lsp-booster][emacs-lsp-booster]] as a binary on your system.
 
 #+BEGIN_SRC emacs-lisp
