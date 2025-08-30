@@ -265,24 +265,25 @@ You can use the bindings C-+ C– for zooming in/out. You can also use CTRL plus
 By default, Emacs includes a lot of UI elements that may make it more discoverable. Personally, however, it causes unwanted visual noise.
 
 #+BEGIN_SRC emacs-lisp
-(setq inhibit-startup-message t)
+  (setq inhibit-startup-message t)
 
-(scroll-bar-mode -1)        ; Disable visible scrollbar
-(tool-bar-mode -1)          ; Disable the toolbar
-(tooltip-mode -1)           ; Disable tooltips
-(set-fringe-mode 10)        ; Give some breathing room
+  (scroll-bar-mode -1)        ; Disable visible scrollbar
+  (tool-bar-mode -1)          ; Disable the toolbar
+  (tooltip-mode -1)           ; Disable tooltips
+  (set-fringe-mode 10)        ; Give some breathing room
 
-(menu-bar-mode -1)            ; Disable the menu bar
-(column-number-mode)
-(global-display-line-numbers-mode 1)
-(setq display-line-numbers-type 'relative)
-(global-visual-line-mode t)
+  (menu-bar-mode -1)            ; Disable the menu bar
+  (column-number-mode)
+  (global-display-line-numbers-mode 1)
+  (setq display-line-numbers-type 'relative)
+  (global-visual-line-mode t)
 
-;; Disable line numbers for some modes
-(dolist (mode '(org-mode-hook
-                term-mode-hook
-                eshell-mode-hook))
-  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+  ;; Disable line numbers for some modes
+  (dolist (mode '(org-mode-hook
+                  term-mode-hook
+  		pdf-view-mode-hook
+                  eshell-mode-hook))
+    (add-hook mode (lambda () (display-line-numbers-mode 0))))
 #+END_SRC
 
 ** Theme
@@ -2566,4 +2567,12 @@ Visualise colour codes.
 #+BEGIN_SRC emacs-lisp
   (use-package rainbow-mode
     :hook (emacs-lisp-mode . rainbow-mode))
+#+END_SRC
+
+** PDF reading
+
+#+BEGIN_SRC emacs-lisp
+  (use-package pdf-tools
+    :config
+    (pdf-tools-install))
 #+END_SRC
