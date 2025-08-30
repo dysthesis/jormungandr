@@ -233,7 +233,7 @@ Define my preferred fixed pitch and variable pitch fonts.
 "JBMono Nerd Font" is a customised build of JetBrainsMono Nerd Font with some font features enabled, as Emacs doesn't seem to have the ability to enable it by itself.
 
 #+BEGIN_SRC emacs-lisp :tangle init.el
-  (defun dysthesis/configure-font (frame)
+  (defun dysthesis/configure-font (&optional frame)
     "Configure font given initial non-daemon FRAME. Intended for `after-make-frame-functions'."
     (let ((my-font-height (if (string= (system-name) "deimos") 90 70))
   	(my-font-size   (if (string= (system-name) "deimos") 9 7)))
@@ -245,8 +245,9 @@ Define my preferred fixed pitch and variable pitch fonts.
        `(variable-pitch ((t (:family "SF Pro Display" :height ,my-font-height))))
        `(fixed-pitch ((t (:family "JBMono Nerd Font" :height ,my-font-height))))))
     <<font-resize-variable-font>>
-    (remove-hook 'server-after-make-frame-functions #'dysthesis/configure-font))
-  (add-hook 'server-after-make-frame-functions #'dysthesis/configure-font)
+    (remove-hook 'after-make-frame-functions #'dysthesis/configure-font))
+
+  (add-hook 'after-make-frame-functions #'dysthesis/configure-font)
   (unless (daemonp)
     (dysthesis/configure-font (selected-frame)))
 #+END_SRC
