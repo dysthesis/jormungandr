@@ -224,26 +224,37 @@ Doom Emacs has a better dashboard than the built in one.
 #+END_SRC
 
 ** Font
+:PROPERTIES:
+:HEADER-ARGS:EMACS-LISP:   :noweb yes 
+:END:
 
 Define my preferred fixed pitch and variable pitch fonts.
 
 "JBMono Nerd Font" is a customised build of JetBrainsMono Nerd Font with some font features enabled, as Emacs doesn't seem to have the ability to enable it by itself.
 
-#+BEGIN_SRC emacs-lisp
-  (let ((my-font-height (if (string= (system-name) "deimos") 90 70))
-        (my-font-size   (if (string= (system-name) "deimos") 9 7)))
-    (set-face-attribute 'default nil :font "JBMono Nerd Font" :height my-font-height)
-    (set-fontset-font t nil (font-spec :size my-font-size :name "JBMono Nerd Font"))
-    (setq-default line-spacing 0.2)
-    (custom-theme-set-faces
-     'user
-     `(variable-pitch ((t (:family "SF Pro Display" :height ,my-font-height))))
-     `(fixed-pitch ((t (:family "JBMono Nerd Font" :height ,my-font-height))))))
+#+BEGIN_SRC emacs-lisp :tangle init.el
+  (defun dysthesis/configure-font (frame)
+    "Configure font given initial non-daemon FRAME. Intended for `after-make-frame-functions'."
+    (let ((my-font-height (if (string= (system-name) "deimos") 90 70))
+  	(my-font-size   (if (string= (system-name) "deimos") 9 7)))
+      (set-face-attribute 'default nil :font "JBMono Nerd Font" :height my-font-height)
+      (set-fontset-font t nil (font-spec :size my-font-size :name "JBMono Nerd Font"))
+      (setq-default line-spacing 0.2)
+      (custom-theme-set-faces
+       'user
+       `(variable-pitch ((t (:family "SF Pro Display" :height ,my-font-height))))
+       `(fixed-pitch ((t (:family "JBMono Nerd Font" :height ,my-font-height))))))
+    <<font-resize-variable-font>>
+    (remove-hook 'server-after-make-frame-functions #'dysthesis/configure-font))
+  (add-hook 'server-after-make-frame-functions #'dysthesis/configure-font)
+  (unless (daemonp)
+    (dysthesis/configure-font (selected-frame)))
 #+END_SRC
 
 Scale the variable pitch font to match the fixed pitch font. Otherwise, it looks slightly smaller.
 
-#+BEGIN_SRC emacs-lisp
+#+name: font-resize-variable-font
+#+BEGIN_SRC emacs-lisp :tangle no
   (add-to-list 'face-font-rescale-alist '("SF Pro Display" . 1.1))
 #+END_SRC
 
