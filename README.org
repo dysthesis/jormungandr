@@ -491,6 +491,12 @@ Allow the use of both variable pitch and fixed pitch fonts wherever appropriate.
                                        ("DEPRECATED" font-lock-doc-face bold))))
 #+END_SRC
 
+** Hide mode line
+
+#+BEGIN_SRC emacs-lisp
+(use-package hide-mode-line)
+#+END_SRC
+
 * Completion
 ** Vertico
 
@@ -1420,8 +1426,8 @@ Define how =elfeed= should exit the entry buffer.
 
 #+name: elfeed-show-mode-hooks
 #+begin_src emacs-lisp
-(add-hook! 'elfeed-show-mode-hook (hide-mode-line-mode 1))
-(add-hook! 'elfeed-search-update-hook #'hide-mode-line-mode)
+(add-hook 'elfeed-show-mode-hook #'hide-mode-line-mode)
+(add-hook 'elfeed-search-update-hook #'hide-mode-line-mode)
 #+end_src
 *** Title
 
@@ -2333,7 +2339,7 @@ Highlight each day in the calendar according to the number of tasks due that day
 #+BEGIN_SRC emacs-lisp :tangle init.el
   (use-package citar-org-roam
     :ensure t
-    :after (citar org-roam)
+    :after (:any citar org org-roam)
     :custom
     (citar-org-roam-capture-template-key "l")
     (citar-org-roam-note-title-template "${author} - ${title}")
@@ -2364,36 +2370,6 @@ Add a creation date and maintain a last edited date for each Org-roam node.
       :ensure t
       :after org-roam
       :config (org-roam-timestamps-mode))
-#+END_SRC
-
-*** UI
-
-#+BEGIN_SRC emacs-lisp
-    (use-package org-roam-ui
-      :ensure t
-      :after org-roam
-      ;;         normally we'd recommend hooking orui after org-roam, but since org-roam does not have
-      ;;         a hookable mode anymore, you're advised to pick something yourself
-      ;;         if you don't care about startup time, use
-      ;;  :hook (after-init . org-roam-ui-mode)
-      :custom
-      (org-roam-ui-sync-theme t)
-      (org-roam-ui-follow t)
-      (org-roam-ui-update-on-save t)
-      (org-roam-ui-open-on-start t)
-      (org-roam-ui-custom-theme
-       '((bg-alt . "#0f0f0f")
-         (bg . "#000000")
-         (fg . "#ffffff")
-         (fg-alt . "#cdd6f4")
-         (red . "#f38ba8")
-         (orange . "#fab387")
-         (yellow ."#f9e2af")
-         (green . "#a6e3a1")
-         (cyan . "#94e2d5")
-         (blue . "#89b4fa")
-         (violet . "#8be9fd")
-         (magenta . "#f5c2e7"))))
 #+END_SRC
 
 ** Org-ref
@@ -2584,7 +2560,11 @@ Visualise colour codes.
 ** PDF reading
 
 #+BEGIN_SRC emacs-lisp
-  (use-package pdf-tools
-    :config
-    (pdf-tools-install))
+   (use-package pdf-tools
+     :hook (pdf-tools-enabled . pdf-view-midnight-minor-mode)
+     :hook (pdf-tools-enabled   . hide-mode-line-mode)
+     :custom
+     (pdf-view-midnight-colors '("#ffffff" . "#080808"))
+     :config
+     (pdf-tools-install))
 #+END_SRC
