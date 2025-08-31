@@ -2479,11 +2479,17 @@ Render previews forTikZ plots inside LaTeX fragments in Org files.
 
 * Terminal emulation
 
-Use vterm because it is simple and fast, and does all I need.
 
 #+begin_src emacs-lisp
-  (use-package vterm
-    :ensure t)
+  (use-package eat
+    :ensure t
+    :custom
+    (eat-enable-auto-line-mode t)
+    (eat-enable-yank-to-terminal t)
+    (eat-enable-kill-from-terminal t)
+    :bind (("C-x E" . eat)
+  	 :map project-prefix-map
+  	 ("t" . eat-project)))
 #+end_src
 
 * Miscellaneous
