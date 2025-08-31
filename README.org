@@ -940,7 +940,7 @@ Use =dape= because =dap-mode= is bound to =lsp-mode=.
                  ;; inject (substitute) codelldb from nix
                  `(codelldb-rust 
                    modes (rust-mode rust-ts-mode)
-                   command 'dysthesis/codelldb-path 
+                   command dysthesis/codelldb-path 
                    :type "lldb" 
                    :request "launch" 
                    command-args ("--port" :autoport "--settings" "{\"sourceLanguages\":[\"rust\"]}")
