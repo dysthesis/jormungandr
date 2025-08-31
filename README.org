@@ -892,6 +892,75 @@ Improve the performance of Eglot. This requires the installation of [[https://gi
     	     "c s" '(consult-eglot-symbols :wk "Code Symbols")))
 #+end_src
 
+* Debugger
+
+Use =dape= because =dap-mode= is bound to =lsp-mode=.
+
+#+BEGIN_SRC emacs-lisp
+  (defcustom dysthesis/codelldb-path (executable-find "codelldb")
+    "Path to the codelldb installation"
+    :type 'string)
+
+  (use-package dape
+    :preface
+    ;; By default dape shares the same keybinding prefix as `gud'
+    ;; If you do not want to use any prefix, set it to nil.
+    ;; (setq dape-key-prefix "\C-x\C-a")
+
+    :hook
+    ;; Save breakpoints on quit
+    (kill-emacs . dape-breakpoint-save)
+    ;; Load breakpoints on startup
+    (after-init . dape-breakpoint-load)
+
+    :custom
+    ;; Turn on global bindings for setting breakpoints with mouse
+    ;; (dape-breakpoint-global-mode +1)
+
+    ;; Info buffers to the right
+    (dape-buffer-window-arrangement 'right)
+    ;; Info buffers like gud (gdb-mi)
+    ;; (dape-buffer-window-arrangement 'gud)
+    ;; (dape-info-hide-mode-line nil)
+
+    ;; Projectile users
+    (dape-cwd-function 'projectile-project-root)
+
+    :config
+    ;; Pulse source line (performance hit)
+    ;; (add-hook 'dape-display-source-hook 'pulse-momentary-highlight-one-line)
+
+    ;; Save buffers on startup, useful for interpreted languages
+    ;; (add-hook 'dape-start-hook (lambda () (save-some-buffers t t)))
+
+    ;; Kill compile buffer on build success
+    (add-hook 'dape-compile-hook 'kill-buffer)
+    (add-to-list 'dape-configs
+                 ;; XXX: custom (mostly copy-pasted) config for rust so I can
+                 ;; inject (substitute) codelldb from nix
+                 `(codelldb-rust 
+                   modes (rust-mode rust-ts-mode)
+                   command 'dysthesis/codelldb-path 
+                   :type "lldb" 
+                   :request "launch" 
+                   command-args ("--port" :autoport "--settings" "{\"sourceLanguages\":[\"rust\"]}")
+                   ensure dape-ensure-command port :autoport fn dape-config-autoport 
+                   :cwd dape-cwd-fn 
+                   :program (lambda ()
+                              (file-name-concat "target" "debug"
+                                                (thread-first (dape-cwd)
+                                                              (directory-file-name)
+                                                              (file-name-split)
+                                                              (last)
+                                                              (car))))
+                   :args [])))
+
+  ;; For a more ergonomic Emacs and `dape' experience
+  (use-package repeat
+    :custom
+    (repeat-mode +1))
+#+END_SRC
+
 * Syntax checking
 
 Check syntax on-the-fly when writing.

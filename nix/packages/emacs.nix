@@ -27,6 +27,8 @@
   mkNpins = mapAttrs (name: value: elisp value name);
 
   builtNpins = mkNpins npins;
+  codelldb = pkgs.vscode-extensions.vadimcn.vscode-lldb;
+
 
   cfg =
     runCommand "init.el"
@@ -40,6 +42,7 @@
 
       echo "(setq rmh-elfeed-org-files (list \"${../../elfeed.org}\"))" >> $out/init.el
       cat $src >> $out/init.el
+      echo "(setq dysthesis/codelldb-path \"${codelldb}/share/vscode/extensions/vadimcn.vscode-lldb/adapter/codelldb\")"  >> $out/init.el
 
       emacs --batch \
         --eval "(setq native-comp-eln-load-path (list \"$out/eln-cache\"))" \
