@@ -1,5 +1,8 @@
 #+title: Emacs Configuration
-#+auto_tangle: true
+
+This document defines the entire configuration of Emacs. It is tangled to produce =early-init.el= and =init.el=.
+
+Note that packages are managed by Nix. Hence, there are no configurations pertaining to package managers such as =package.el=, =straight.el=, /etc./
 
 * Initialisation
 :PROPERTIES:
@@ -53,14 +56,13 @@ Later on, once initialisation is done, we restore the original value that we bac
 *** Native compilation and byte-compilation
 If the current build of Emacs supports the native compilation of Emacs Lisp code, enable the native compilation of packages in order to achieve better performance.
 
+If native compilation is unavailable, remove the =native-compile= feature from =features= so downstream feature checks do not need to special-case it.
+
 #+begin_src emacs-lisp
-(if ;; if native compilation is available in the current build...
-    (and (featurep 'native-compile)
+(if (and (featurep 'native-compile)
          (fboundp 'native-comp-available-p)
          (native-comp-available-p))
-    ;; ...enable native compilation of packages...
     (setq package-native-compile t)
-  ;; ...otherwise delete it from the list of features.
   (setq features (delq 'native-compile features)))
 #+end_src
 
@@ -105,7 +107,7 @@ However, disabling compaction of font caches might enlarge the Emacs memory foot
 This section defines some options that are evaluated when running an interactive instance of Emacs.
 
 **** Resize frames pixelwise
-Resizing frames can be costly when changing font. Disable this to improve startup tijmes with fonts larger than the system default. Allow frame sizes to increase/decrease by one pixel. Do not perform any rounding.
+Resizing frames can be costly when changing font. Disable this to improve startup times with fonts larger than the system default. Allow frame sizes to increase or decrease by one pixel. Do not perform any rounding.
 
 #+name: early-init-frame-resize-pixelwise
 #+begin_src emacs-lisp :tangle no :noweb yes
@@ -163,7 +165,7 @@ I personally do not use bidirectional text scanning. Hence, it is disabled for s
 #+end_src
 
 **** Use a low overhead mode as the initial major mode
-Th initial buffer is created during startup even in non-interactive sesions, and its major mode is fully initialised. Modes like =text-mode=, =org-mode=, or even the default =lisp-interaction-mode= loads extra packages and runs hooks, slowing down startup. Therefore, we set =fundamental-mode= for the initial buffer to avoid unnecessary startup overhead.
+The initial buffer is created during startup even in non-interactive sessions, and its major mode is fully initialised. Modes like =text-mode=, =org-mode=, or even the default =lisp-interaction-mode= load extra packages and run hooks, slowing down startup. Therefore, we set =fundamental-mode= for the initial buffer to avoid unnecessary startup overhead.
 
 #+name: early-init-initial-major-mode
 #+begin_src emacs-lisp :tangle no :noweb yes
@@ -204,6 +206,17 @@ And this option is useless on non-XOrg window managers..
 #+end_src
 
 *** File name handler
+During startup, Emacs consults =file-name-handler-alist= for a surprisingly large
+number of file operations. Temporarily reducing it can improve startup and
+package load time.
+
+There are two practical constraints:
+
+- Command-line file arguments are processed very early and may include TRAMP
+  paths. Those must still work.
+- Any modifications made during startup should be preserved rather than being
+  overwritten when restoring the original value.
+
 #+begin_src emacs-lisp
 (defvar emacs--old-file-name-handler-alist (default-toplevel-value
                                             'file-name-handler-alist))
@@ -213,7 +226,7 @@ And this option is useless on non-XOrg window managers..
 FN is the function and ARGS-LEFT is the same argument as `command-line-1'.
 Emacs processes command-line files very early in startup. These files may
 include special paths like TRAMP paths, so restore `file-name-handler-alist' for
-this stage of initialization."
+this stage of initialisation."
   (let ((file-name-handler-alist (if args-left
                                      emacs--old-file-name-handler-alist
                                    file-name-handler-alist)))
@@ -223,17 +236,11 @@ this stage of initialization."
   "Restore `file-name-handler-alist'."
   (set-default-toplevel-value
    'file-name-handler-alist
-   ;; Merge instead of overwrite to preserve any changes made since startup.
    (delete-dups (append file-name-handler-alist
                         emacs--old-file-name-handler-alist))))
 
-(when (and emacs-optimize-file-name-handler-alist
-           (not (daemonp))
-           (not emacs-debug))
-  ;; Determine the state of bundled libraries using calc-loaddefs.el. If
-  ;; compressed, retain the gzip handler in `file-name-handler-alist`. If
-  ;; compiled or neither, omit the gzip handler during startup for improved
-  ;; startup and package load time.
+(when (and (not (daemonp))
+           (not init-file-debug))
   (set-default-toplevel-value
    'file-name-handler-alist
    (if (locate-file-internal "calc-loaddefs.el" load-path)
@@ -241,12 +248,9 @@ this stage of initialization."
      (list (rassq 'jka-compr-handler
                   emacs--old-file-name-handler-alist))))
 
-  ;; Ensure the new value persists through any current let-binding.
   (put 'file-name-handler-alist 'initial-value
        emacs--old-file-name-handler-alist)
 
-  ;; Emacs processes command-line files very early in startup. These files may
-  ;; include special paths TRAMP. Restore `file-name-handler-alist'.
   (advice-add 'command-line-1 :around #'emacs--respect-file-handlers)
 
   (add-hook 'emacs-startup-hook #'emacs--restore-file-name-handler-alist
@@ -254,19 +258,21 @@ this stage of initialization."
 #+end_src
 
 *** Inhibit redisplay
+Suppress redisplay during the earliest phase of startup to avoid visual
+flashing and to reduce the amount of work Emacs does before the first command.
+The setting is reset on the first post-command.
+
 #+begin_src emacs-lisp
 (defun emacs--reset-inhibit-redisplay ()
   "Reset inhibit redisplay."
   (setq-default inhibit-redisplay nil)
-  (remove-hook 'post-command-hook #'minimal-emacs--reset-inhibit-redisplay))
+  (remove-hook 'post-command-hook #'emacs--reset-inhibit-redisplay))
 
 (when (and (not (daemonp))
            (not noninteractive)
-           (not minimal-emacs-debug))
-  ;; Suppress redisplay and redraw during startup to avoid delays and
-  ;; prevent flashing an unstyled Emacs frame.
+           (not init-file-debug))
   (setq-default inhibit-redisplay t)
-  (add-hook 'post-command-hook #'minimal-emacs--reset-inhibit-redisplay -100))
+  (add-hook 'post-command-hook #'emacs--reset-inhibit-redisplay -100))
 #+end_src
 
 *** Inhibit message
@@ -278,7 +284,7 @@ this stage of initialization."
 
 (when (and (not (daemonp))
            (not noninteractive)
-           (not minimal-emacs-debug))
+           (not init-file-debug))
   (setq-default inhibit-message t)
   (add-hook 'post-command-hook #'minimal-emacs--reset-inhibit-message -100))
 #+end_src
@@ -287,7 +293,7 @@ this stage of initialization."
 #+begin_src emacs-lisp
 (when (and (not (daemonp))
            (not noninteractive)
-           (not minimal-emacs-debug))
+           (not init-file-debug))
   (put 'mode-line-format
        'initial-value (default-toplevel-value 'mode-line-format))
   (setq-default mode-line-format nil)
@@ -297,24 +303,29 @@ this stage of initialization."
 #+end_src
 
 ** UI elements
-#+begin_src emacs-lisp
-(setq frame-title-format minimal-emacs-frame-title-format
-      icon-title-format minimal-emacs-frame-title-format)
+Set a small number of UI defaults early, while avoiding unnecessary frame
+redraws during startup.
 
-;; Disable startup screens and messages
+In particular, this does the following:
+
+- Disable the splash screen (=inhibit-splash-screen=).
+- Disable the menu bar, tool bar, and scroll bars primarily via frame
+  parameters (rather than calling =menu-bar-mode=, =tool-bar-mode=, or
+  =scroll-bar-mode= during startup).
+- Defer =tool-bar-setup= until after the user init file has loaded (when
+  relevant), then run it only if =tool-bar-mode= remains enabled.
+- Disable tooltips and graphical dialogue boxes.
+
+#+begin_src emacs-lisp
 (setq inhibit-splash-screen t)
 
-;; I intentionally avoid calling `menu-bar-mode', `tool-bar-mode', and
-;; `scroll-bar-mode' because manipulating frame parameters can trigger or queue
-;; a superfluous and potentially expensive frame redraw at startup, depending
-;; on the window system. The variables must also be set to `nil' so users don't
-;; have to call the functions twice to re-enable them.
-(unless (push '(menu-bar-lines . 0) default-frame-alist)
-  (unless (memq window-system '(mac ns))
-    (setq menu-bar-mode nil)))
+(unless (assq 'menu-bar-lines default-frame-alist)
+  (push '(menu-bar-lines . 0) default-frame-alist))
+(unless (memq window-system '(mac ns))
+  (setq menu-bar-mode nil))
 
 (defun minimal-emacs--setup-toolbar (&rest _)
-  "Setup the toolbar."
+  "Set up the tool bar."
   (when (fboundp 'tool-bar-setup)
     (advice-remove 'tool-bar-setup #'ignore)
     (when (bound-and-true-p tool-bar-mode)
@@ -323,8 +334,6 @@ this stage of initialization."
 (when (and (not (daemonp))
            (not noninteractive))
   (when (fboundp 'tool-bar-setup)
-    ;; Temporarily override the tool-bar-setup function to prevent it from
-    ;; running during the initial stages of startup
     (advice-add 'tool-bar-setup :override #'ignore)
 
     (advice-add 'startup--load-user-init-file :after
@@ -346,10 +355,13 @@ this stage of initialization."
 #+end_src
 
 ** Security
+Require certificate verification for TLS connections, and prefer stronger
+cryptographic parameters.
+
 #+begin_src emacs-lisp
-(setq gnutls-verify-error t)  ; Prompts user if there are certificate issues
-(setq tls-checktrust t)  ; Ensure SSL/TLS connections undergo trust verification
-(setq gnutls-min-prime-bits 3072)  ; Stronger GnuTLS encryption
+(setq gnutls-verify-error t)
+(setq tls-checktrust t)
+(setq gnutls-min-prime-bits 3072)
 #+end_src
 ** Miscellaneous
 *** Default encoding
@@ -362,15 +374,14 @@ This is 2026, use UTF-8 encoding.
 *** Increase maximum process read threshold
 Increase the maximum number of bytes to read from subprocess in a single chunk. This is useful if the subprocess generates very large (megabytes) amounts of data in one go.
 
-We increase it to 1024 kB.
+We increase it to 2 MiB.
 
 #+begin_src emacs-lisp
 (setq read-process-output-max
       (* 2 1024 1024))
 #+end_src
 
-Tell Emacs to immediately read outputs from subprocesses. Do not batch them even if the ouptuts are small.
-
+Tell Emacs to immediately read outputs from subprocesses. Do not batch them even if the outputs are small.
 #+begin_src emacs-lisp
 (setq process-adaptive-read-buffering nil)
 #+end_src
@@ -400,4 +411,646 @@ Restore the original value of the garbage collection parameters.
 
 #+begin_src emacs-lisp
 (emacs--restore-gc-values)
+#+end_src
+* Configuration
+:PROPERTIES:
+:HEADER-ARGS:EMACS-LISP: :tangle init.el
+:END:
+
+** Core
+*** Behaviours
+**** Ask to terminate asynchronous compilation
+This prevents native compilation from leaving temporary files in =/tmp=.
+
+#+begin_src emacs-lisp
+(setq native-comp-async-query-on-exit t)
+#+end_src
+
+**** Allow abbreviated responses
+Allow users to respond =y= for yes and =n= for no.
+
+#+begin_src emacs-lisp
+(setq read-answer-short t)
+(if (boundp 'use-short-answers)
+    (setq use-short-answers t)
+  (advice-add 'yes-or-no-p :override #'y-or-n-p))
+#+end_src
+
+**** Undo limit
+#+begin_src emacs-lisp
+(setq undo-limit (* 13 160000)
+      undo-strong-limit (* 13 240000)
+      undo-outer-limit (* 13 24000000))
+#+end_src
+
+*** Minibuffer
+**** Allow nested minibuffers
+#+begin_src emacs-lisp
+(setq enable-recursive-minibuffers t)
+#+end_src
+
+**** No cursor in read-only sections of minibuffer
+#+begin_src emacs-lisp
+(setq minibuffer-prompt-properties
+      '(read-only t
+        intangible t
+        cursor-intangible t
+        face minibuffer-prompt))
+(add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
+#+end_src
+
+*** User interface
+This section configures broadly visible UI behaviour. None of this depends on
+external packages.
+
+Concretely:
+
+- Reduce how often UI elements are refreshed by setting =which-func-update-delay=.
+- For older Emacs versions where =idle-update-delay= exists (it is /obsolete/ in Emacs 30.1 and newer), keep it consistent with =which-func-update-delay=.
+- Never display the built-in hello file (=view-hello-file=).
+- Disable both audible and visible bells (=ring-bell-function= and =visible-bell=).
+
+#+begin_src emacs-lisp
+(setq which-func-update-delay 1.0)
+(when (boundp 'idle-update-delay)
+  (setq idle-update-delay which-func-update-delay))
+
+(defalias #'view-hello-file #'ignore)
+
+(setq visible-bell nil
+      ring-bell-function #'ignore)
+#+end_src
+
+*** Parentheses matching
+#+begin_src emacs-lisp
+(setq show-paren-delay 0.1
+      show-paren-highlight-openparen t
+      show-paren-when-point-inside-paren t
+      show-paren-when-point-in-periphery t)
+#+end_src
+
+*** Miscellaneous
+Small quality-of-life defaults that do not warrant their own section:
+
+- Ensure the =*Customize*= buffer is killed after finishing (=custom-buffer-done-kill=).
+- Let =whitespace-mode= use =fill-column= (=whitespace-line-column= set to =nil=).
+- Set sane defaults for =display-line-numbers-mode=.
+- Use a clear ellipsis character (=truncate-string-ellipsis=).
+- Do not truncate printed s-expressions in =M-:= (=eval-expression-print-length= and =eval-expression-print-level=).
+- Place underlines at the descent line (=x-underline-at-descent-line=).
+- Keep Imenu indices up to date (=imenu-auto-rescan=) and avoid truncating long items (=imenu-max-item-length=).
+- Avoid creating newlines by accident when moving past the end of the buffer (=next-line-add-newlines=).
+- Save bookmarks immediately after changes (=bookmark-save-flag=).
+
+#+begin_src emacs-lisp
+(setq custom-buffer-done-kill t)
+
+(setq whitespace-line-column nil)
+
+(setq-default display-line-numbers-width 3
+              display-line-numbers-widen t)
+
+(setq truncate-string-ellipsis "…")
+
+(setq eval-expression-print-length nil
+      eval-expression-print-level nil)
+
+(setq x-underline-at-descent-line t)
+
+(setq remote-file-name-inhibit-cache 50)
+
+(setq imenu-auto-rescan t)
+
+(setq imenu-max-item-length 160)
+
+(setq next-line-add-newlines nil)
+
+(setq bookmark-save-flag 1)
+#+end_src
+
+** Files, buffers, and persistence
+*** TRAMP
+#+begin_src emacs-lisp
+(setq tramp-verbose 1
+      tramp-completion-reread-directory-timeout 50)
+#+end_src
+
+*** Files
+These defaults are primarily about reducing friction when visiting and managing
+files.
+
+- Prefer moving deletions to the system trash when interactive (=delete-by-moving-to-trash=).
+- Suppress redundant warnings when re-visiting a file that is already open (=find-file-suppress-same-file-warnings=).
+- Resolve symlinks up-front (=find-file-visit-truename=) and let VC follow symlinks without prompting (=vc-follow-symlinks=).
+- Prefer vertical splits by default (=split-width-threshold= and =split-height-threshold=).
+
+#+begin_src emacs-lisp
+(setq delete-by-moving-to-trash (not noninteractive)
+      remote-file-name-inhibit-delete-by-moving-to-trash t)
+
+(setq find-file-suppress-same-file-warnings t)
+
+(setq find-file-visit-truename t
+      vc-follow-symlinks t)
+
+(setq split-width-threshold 170
+      split-height-threshold nil)
+#+end_src
+
+*** Buffers
+#+begin_src emacs-lisp
+(setq uniquify-buffer-name-style 'forward)
+#+end_src
+
+*** Comint
+#+begin_src emacs-lisp
+(setq ansi-color-for-comint-mode t
+      comint-prompt-read-only t
+      comint-buffer-maximum-size 4096)
+#+end_src
+
+*** Compilation
+Assume compilation buffers are disposable, and avoid prompts that interrupt the
+flow of iterating.
+
+- Do not ask before saving buffers prior to compilation (=compilation-ask-about-save=).
+- Always kill a running compilation when starting a new one (=compilation-always-kill=).
+- Auto-scroll compilation output to the first error (=compilation-scroll-output=).
+- Do not ask for confirmation when visiting non-existent files or buffers (=confirm-nonexistent-file-or-buffer=).
+
+#+begin_src emacs-lisp
+(setq compilation-ask-about-save nil
+      compilation-always-kill t
+      compilation-scroll-output 'first-error)
+
+(setq confirm-nonexistent-file-or-buffer nil)
+#+end_src
+
+*** Backups
+This configuration disables lockfiles and backups by default to avoid creating
+world-readable copies of files, especially in shared directories.
+
+The remaining backup settings are still specified so that, if backups are later
+re-enabled, they are
+
+- stored under =user-emacs-directory=,
+- versioned, with old versions pruned automatically, and
+- created by copying (as it is safer for some workflows and filesystems).
+
+#+begin_src emacs-lisp
+(setq create-lockfiles nil
+      make-backup-files nil)
+
+(setq backup-directory-alist
+      `(("." . ,(expand-file-name "backup" user-emacs-directory))))
+(setq tramp-backup-directory-alist backup-directory-alist)
+(setq backup-by-copying-when-linked t)
+(setq backup-by-copying t)
+(setq delete-old-versions t)
+(setq version-control t)
+(setq kept-new-versions 5)
+(setq kept-old-versions 5)
+#+end_src
+
+*** Version control
+#+begin_src emacs-lisp
+(setq vc-git-print-log-follow t
+      vc-make-backup-files nil
+      vc-git-diff-switches '("--histogram"))
+#+end_src
+
+*** Auto-save
+This section configures auto-save behaviour. Auto-save is disabled by default
+via =auto-save-default=, but the remaining settings ensure that if any buffer
+enables auto-save it behaves quietly and keeps its files under
+=user-emacs-directory=.
+
+- Keep auto-save quiet (=auto-save-no-message=).
+- Do not disable auto-save after large deletions (=auto-save-include-big-deletions=).
+- Store auto-save lists under =user-emacs-directory=, including TRAMP auto-saves.
+- Delete auto-save files when killing buffers (=kill-buffer-delete-auto-save-files=).
+- Avoid duplicates in the kill ring (=kill-do-not-save-duplicates=).
+
+#+begin_src emacs-lisp
+(setq auto-save-default nil
+      auto-save-no-message t
+      auto-save-include-big-deletions t)
+
+(setq auto-save-list-file-prefix
+      (expand-file-name "autosave/" user-emacs-directory))
+(setq tramp-auto-save-directory
+      (expand-file-name "tramp-autosave/" user-emacs-directory))
+
+(setq kill-buffer-delete-auto-save-files t)
+
+(setq kill-do-not-save-duplicates t)
+#+end_src
+
+*** Auto-revert
+Keep buffers in sync with on-disk changes without prompting. Apply the same
+behaviour to non-file buffers such as Dired (=global-auto-revert-non-file-buffers=),
+while ignoring modes that are known to misbehave (=global-auto-revert-ignore-modes=).
+
+#+begin_src emacs-lisp
+(setq revert-without-query (list ".")
+      auto-revert-stop-on-user-input nil
+      auto-revert-verbose t)
+
+(setq global-auto-revert-non-file-buffers t
+      global-auto-revert-ignore-modes '(Buffer-menu-mode))
+#+end_src
+
+*** Recent files
+Increase =recentf= capacity beyond the default, while keeping the menu itself
+compact.
+
+#+begin_src emacs-lisp
+(setq recentf-max-saved-items 300
+      recentf-max-menu-items 15
+      recentf-auto-cleanup 'mode
+      recentf-exclude nil)
+#+end_src
+
+*** Save place
+#+begin_src emacs-lisp
+(setq save-place-file (expand-file-name "saveplace" user-emacs-directory)
+      save-place-limit 600)
+#+end_src
+
+*** Save history
+Persist minibuffer history across sessions, and additionally retain common
+editing state such as the kill ring, registers, marks, and search history.
+
+#+begin_src emacs-lisp
+(setq history-length 300
+      savehist-save-minibuffer-history t)
+(setq savehist-additional-variables
+      '(kill-ring
+        register-alist
+        mark-ring global-mark-ring
+        search-ring regexp-search-ring))
+#+end_src
+
+** Display
+*** Frames and windows
+Prefer stable window sizing and consistent separators:
+
+- Disable pixelwise window resizing (=window-resize-pixelwise=).
+- Allow minibuffer windows to grow only (=resize-mini-windows=).
+- Define divider widths explicitly via =window-divider-default-*=.
+
+#+begin_src emacs-lisp
+(setq window-resize-pixelwise nil)
+
+(setq resize-mini-windows 'grow-only)
+
+(setq window-divider-default-bottom-width 1
+      window-divider-default-places t
+      window-divider-default-right-width 1)
+#+end_src
+
+*** Fontification
+Skip fontification during user input to reduce latency in large buffers.
+
+#+begin_src emacs-lisp
+(setq redisplay-skip-fontification-on-input t)
+#+end_src
+
+*** Scrolling
+Favour smooth and predictable scrolling behaviour:
+
+- Permit faster but occasionally imprecise scrolling (=fast-but-imprecise-scrolling=).
+- Move point to the top or bottom before signalling a scrolling error (=scroll-error-top-bottom=).
+- Preserve screen position when scrolling (=scroll-preserve-screen-position=).
+- Reduce eager recentring (=scroll-conservatively=).
+- Avoid random vertical jumps on long lines (=auto-window-vscroll=).
+- Keep margins and context lines conservative (=scroll-margin= and =next-screen-context-lines=).
+- Configure horizontal scrolling (=hscroll-margin= and =hscroll-step=).
+
+#+begin_src emacs-lisp
+(setq fast-but-imprecise-scrolling t)
+(setq scroll-error-top-bottom t)
+(setq scroll-preserve-screen-position t)
+(setq scroll-conservatively 20)
+(setq auto-window-vscroll nil)
+(setq scroll-margin 0)
+(setq next-screen-context-lines 0)
+
+(setq hscroll-margin 2
+      hscroll-step 1)
+#+end_src
+
+*** Mouse
+Insert mouse-yanked text at the click location rather than at point, and enable
+GUI context menus when available.
+
+#+begin_src emacs-lisp
+(setq mouse-yank-at-point nil)
+
+(when (and (display-graphic-p) (fboundp 'context-menu-mode))
+  (add-hook 'after-init-hook #'context-menu-mode))
+#+end_src
+
+*** Cursor
+Reduce visual noise and a small amount of rendering work:
+
+- Disable the blinking cursor (=blink-cursor-mode=).
+- Do not blink matching parentheses (=blink-matching-paren=).
+- Do not stretch the cursor to wide characters (=x-stretch-cursor=).
+- Avoid rendering cursors and regions in non-selected windows (=cursor-in-non-selected-windows=).
+
+#+begin_src emacs-lisp
+(when (bound-and-true-p blink-cursor-mode)
+  (blink-cursor-mode -1))
+
+(setq blink-matching-paren nil)
+
+(setq x-stretch-cursor nil)
+
+(setq-default cursor-in-non-selected-windows nil)
+(setq highlight-nonselected-windows nil)
+#+end_src
+
+** Editing
+*** Text editing, indentation, and formatting
+This section defines defaults for interactive editing. The intent is to favour
+predictable behaviour and keep routine operations responsive.
+
+**** Rescaling and deletion feedback
+Avoid automatic frame resizing when adjusting text scale, and keep paired
+deletion feedback brief.
+
+#+name: config-editing-rescaling-and-deletion
+#+begin_src emacs-lisp :tangle no
+(setq global-text-scale-adjust-resizes-frames nil)
+(setq delete-pair-blink-delay 0.03)
+#+end_src
+
+**** Fringes and indicators
+Define narrow, consistent fringes, and disable fringe indicators for buffer
+boundaries and empty lines.
+
+#+name: config-editing-fringes
+#+begin_src emacs-lisp :tangle no
+(setq-default left-fringe-width 8
+              right-fringe-width 8
+              indicate-buffer-boundaries nil
+              indicate-empty-lines nil)
+#+end_src
+
+**** Wrapping
+Enable =word-wrap= while truncating long lines by default, as soft wrapping can
+be expensive in large buffers.
+
+#+name: config-editing-wrapping
+#+begin_src emacs-lisp :tangle no
+(setq-default word-wrap t
+              truncate-lines t)
+(setq truncate-partial-width-windows nil)
+#+end_src
+
+**** Indentation and completion
+Prefer spaces over tabs, restrict electric indentation to newline and DEL, and
+enable TAB-based indentation and completion.
+
+#+name: config-editing-indentation
+#+begin_src emacs-lisp :tangle no
+(setq-default electric-indent-chars '(?\n ?\^?)
+              indent-tabs-mode nil
+              tab-width 4)
+
+(setq tab-always-indent 'complete)
+(setq tab-first-completion 'word-or-paren-or-punct)
+
+(setq read-extended-command-predicate #'command-completion-default-include-p)
+#+end_src
+
+**** Commenting and layout
+Keep commenting predictable, use a conventional =fill-column=, avoid
+typewriter-era double spacing at sentence ends, and ensure files end with a
+newline.
+
+#+name: config-editing-commenting-and-layout
+#+begin_src emacs-lisp :tangle no
+(setq comment-multi-line t
+      comment-empty-lines t)
+
+(setq-default fill-column 80)
+
+(setq sentence-end-double-space nil)
+(setq require-final-newline t)
+#+end_src
+
+**** Search highlighting
+Highlight search matches immediately.
+
+#+name: config-editing-search-highlighting
+#+begin_src emacs-lisp :tangle no
+(setq lazy-highlight-initial-delay 0)
+#+end_src
+
+**** Putting it all together
+#+begin_src emacs-lisp :noweb yes
+<<config-editing-rescaling-and-deletion>>
+
+<<config-editing-fringes>>
+
+<<config-editing-wrapping>>
+
+<<config-editing-indentation>>
+
+<<config-editing-commenting-and-layout>>
+
+<<config-editing-search-highlighting>>
+#+end_src
+
+*** Modeline
+Do not display the system load average in the mode line.
+
+#+begin_src emacs-lisp
+(setq display-time-default-load-average nil)
+#+end_src
+
+*** File type behaviour
+Reduce noisy heuristics in mode-specific indentation logic.
+
+#+begin_src emacs-lisp
+(setq python-indent-guess-indent-offset-verbose nil)
+
+(setq sh-indent-after-continuation 'always)
+#+end_src
+
+** Built-in packages
+*** Dired and ls-lisp
+Dired defaults favour predictable recursive operations and reduce the number of
+confirmation prompts.
+
+**** Dired defaults
+#+begin_src emacs-lisp
+(setq dired-free-space nil
+      dired-dwim-target t
+      dired-deletion-confirmer 'y-or-n-p
+      dired-filter-verbose nil
+      dired-recursive-deletes 'top
+      dired-recursive-copies 'always
+      dired-vc-rename-file t
+      dired-create-destination-dirs 'ask
+      dired-clean-confirm-killing-deleted-buffers nil)
+#+end_src
+
+**** Auto-revert integration
+Use =dired-buffer-stale-p= to determine when a Dired buffer should be refreshed,
+while avoiding automatic reverts for remote directories.
+
+#+begin_src emacs-lisp
+(setq auto-revert-remote-files nil
+      dired-auto-revert-buffer 'dired-buffer-stale-p)
+#+end_src
+
+**** Omit files
+Keep =dired-omit-mode= quiet and omit the =.= entry.
+
+#+begin_src emacs-lisp
+(setq dired-omit-verbose nil
+      dired-omit-files (concat "\\`[.]\\'"))
+#+end_src
+
+**** ls-lisp
+Prefer listing directories first, and avoid verbose output in =ls-lisp=.
+
+#+begin_src emacs-lisp
+(setq ls-lisp-verbosity nil
+      ls-lisp-dirs-first t)
+#+end_src
+
+*** Ediff
+Use a single frame and split windows horizontally.
+
+#+begin_src emacs-lisp
+(setq ediff-window-setup-function 'ediff-setup-windows-plain
+      ediff-split-window-function 'split-window-horizontally)
+#+end_src
+
+*** Help
+Make =apropos= search more extensively, and avoid completion mechanisms that
+trigger autoloads when invoking help commands.
+
+#+begin_src emacs-lisp
+(setq apropos-do-all t)
+
+(setq help-enable-completion-autoload nil
+      help-enable-autoload nil
+      help-enable-symbol-autoload nil
+      help-window-select t)
+#+end_src
+
+*** Eglot
+Keep Eglot responsive by avoiding UI blocking during connection establishment,
+and reduce log and progress noise.
+
+**** Connection behaviour
+#+begin_src emacs-lisp
+(setq eglot-sync-connect 0
+      eglot-autoshutdown t
+      eglot-extend-to-xref t)
+#+end_src
+
+**** Logging and progress reporting
+#+begin_src emacs-lisp
+(setq jsonrpc-event-hook nil)
+(when (boundp 'eglot-events-buffer-size)
+  (setq eglot-events-buffer-size 0))
+(setq eglot-events-buffer-config '(:size 0 :format short))
+
+(setq eglot-report-progress nil)
+#+end_src
+
+*** Flymake
+#+begin_src emacs-lisp
+(setq flymake-show-diagnostics-at-end-of-line nil
+      flymake-wrap-around nil)
+#+end_src
+
+*** hl-line
+Restrict hl-line highlighting to the current window.
+
+#+begin_src emacs-lisp
+(setq hl-line-sticky-flag nil
+      global-hl-line-sticky-flag nil)
+#+end_src
+
+*** Icomplete
+Do not delay displaying completion candidates.
+
+#+begin_src emacs-lisp
+(setq icomplete-compute-delay 0.01)
+#+end_src
+
+*** Flyspell
+#+begin_src emacs-lisp
+(setq flyspell-issue-welcome-flag nil
+      flyspell-issue-message-flag nil)
+#+end_src
+
+*** Ispell
+Avoid errors in Emacs 30 and newer when no dictionary is configured, and save
+the personal dictionary silently.
+
+#+begin_src emacs-lisp
+(setq text-mode-ispell-word-completion nil)
+
+(setq ispell-silently-savep t)
+#+end_src
+
+*** Ibuffer
+#+begin_src emacs-lisp
+(setq ibuffer-formats
+      '((mark modified read-only locked
+              " " (name 55 55 :left :elide)
+              " " (size 8 -1 :right)
+              " " (mode 18 18 :left :elide) " " filename-and-process)
+        (mark " " (name 16 -1) " " filename)))
+#+end_src
+
+*** Xref
+Use minibuffer completion for both definitions and cross-reference lists.
+
+#+begin_src emacs-lisp
+(setq xref-show-definitions-function 'xref-show-definitions-completing-read
+      xref-show-xrefs-function 'xref-show-definitions-completing-read)
+#+end_src
+
+*** Abbrev
+Store =abbrev_defs= under =user-emacs-directory= and save abbreviations
+silently.
+
+#+begin_src emacs-lisp
+(setq abbrev-file-name (expand-file-name "abbrev_defs" user-emacs-directory))
+
+(setq save-abbrevs 'silently)
+#+end_src
+
+*** Dabbrev
+Configure dynamic abbreviations to be case-aware, and ignore completions from
+temporary buffers and tag files.
+
+#+begin_src emacs-lisp
+(setq dabbrev-upcase-means-case-search t)
+
+(setq dabbrev-ignored-buffer-modes
+      '(archive-mode image-mode docview-mode tags-table-mode
+                     pdf-view-mode tags-table-mode))
+
+(setq dabbrev-ignored-buffer-regexps
+      '("\\` "
+        "\\(?:\\(?:[EG]?\\|GR\\)TAGS\\|e?tags\\|GPATH\\)\\(<[0-9]+>\\)?"))
+#+end_src
+
+*** Re-enable useful commands
+#+begin_src emacs-lisp
+(dolist (cmd '(list-timers narrow-to-region narrow-to-page
+                           upcase-region downcase-region
+                           list-threads erase-buffer scroll-left
+                           dired-find-alternate-file set-goal-column))
+  (put cmd 'disabled nil))
 #+end_src

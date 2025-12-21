@@ -9,13 +9,10 @@
   (setq gc-cons-threshold emacs--backup-gc-cons-threshold)
   (setq gc-cons-percentage emacs--backup-gc-cons-percentage))
 
-(if ;; if native compilation is available in the current build...
-    (and (featurep 'native-compile)
+(if (and (featurep 'native-compile)
          (fboundp 'native-comp-available-p)
          (native-comp-available-p))
-    ;; ...enable native compilation of packages...
     (setq package-native-compile t)
-  ;; ...otherwise delete it from the list of features.
   (setq features (delq 'native-compile features)))
 
 (setq native-comp-warning-on-missing-source nil
@@ -60,7 +57,7 @@
 FN is the function and ARGS-LEFT is the same argument as `command-line-1'.
 Emacs processes command-line files very early in startup. These files may
 include special paths like TRAMP paths, so restore `file-name-handler-alist' for
-this stage of initialization."
+this stage of initialisation."
   (let ((file-name-handler-alist (if args-left
                                      emacs--old-file-name-handler-alist
                                    file-name-handler-alist)))
@@ -70,17 +67,11 @@ this stage of initialization."
   "Restore `file-name-handler-alist'."
   (set-default-toplevel-value
    'file-name-handler-alist
-   ;; Merge instead of overwrite to preserve any changes made since startup.
    (delete-dups (append file-name-handler-alist
                         emacs--old-file-name-handler-alist))))
 
-(when (and emacs-optimize-file-name-handler-alist
-           (not (daemonp))
-           (not emacs-debug))
-  ;; Determine the state of bundled libraries using calc-loaddefs.el. If
-  ;; compressed, retain the gzip handler in `file-name-handler-alist`. If
-  ;; compiled or neither, omit the gzip handler during startup for improved
-  ;; startup and package load time.
+(when (and (not (daemonp))
+           (not init-file-debug))
   (set-default-toplevel-value
    'file-name-handler-alist
    (if (locate-file-internal "calc-loaddefs.el" load-path)
@@ -88,12 +79,9 @@ this stage of initialization."
      (list (rassq 'jka-compr-handler
                   emacs--old-file-name-handler-alist))))
 
-  ;; Ensure the new value persists through any current let-binding.
   (put 'file-name-handler-alist 'initial-value
        emacs--old-file-name-handler-alist)
 
-  ;; Emacs processes command-line files very early in startup. These files may
-  ;; include special paths TRAMP. Restore `file-name-handler-alist'.
   (advice-add 'command-line-1 :around #'emacs--respect-file-handlers)
 
   (add-hook 'emacs-startup-hook #'emacs--restore-file-name-handler-alist
@@ -102,15 +90,13 @@ this stage of initialization."
 (defun emacs--reset-inhibit-redisplay ()
   "Reset inhibit redisplay."
   (setq-default inhibit-redisplay nil)
-  (remove-hook 'post-command-hook #'minimal-emacs--reset-inhibit-redisplay))
+  (remove-hook 'post-command-hook #'emacs--reset-inhibit-redisplay))
 
 (when (and (not (daemonp))
            (not noninteractive)
-           (not minimal-emacs-debug))
-  ;; Suppress redisplay and redraw during startup to avoid delays and
-  ;; prevent flashing an unstyled Emacs frame.
+           (not init-file-debug))
   (setq-default inhibit-redisplay t)
-  (add-hook 'post-command-hook #'minimal-emacs--reset-inhibit-redisplay -100))
+  (add-hook 'post-command-hook #'emacs--reset-inhibit-redisplay -100))
 
 (defun minimal-emacs--reset-inhibit-message ()
   "Reset inhibit message."
@@ -119,19 +105,59 @@ this stage of initialization."
 
 (when (and (not (daemonp))
            (not noninteractive)
-           (not minimal-emacs-debug))
+           (not init-file-debug))
   (setq-default inhibit-message t)
   (add-hook 'post-command-hook #'minimal-emacs--reset-inhibit-message -100))
 
 (when (and (not (daemonp))
            (not noninteractive)
-           (not minimal-emacs-debug))
+           (not init-file-debug))
   (put 'mode-line-format
        'initial-value (default-toplevel-value 'mode-line-format))
   (setq-default mode-line-format nil)
   (dolist (buf (buffer-list))
     (with-current-buffer buf
       (setq mode-line-format nil))))
+
+(setq inhibit-splash-screen t)
+
+(unless (assq 'menu-bar-lines default-frame-alist)
+  (push '(menu-bar-lines . 0) default-frame-alist))
+(unless (memq window-system '(mac ns))
+  (setq menu-bar-mode nil))
+
+(defun minimal-emacs--setup-toolbar (&rest _)
+  "Set up the tool bar."
+  (when (fboundp 'tool-bar-setup)
+    (advice-remove 'tool-bar-setup #'ignore)
+    (when (bound-and-true-p tool-bar-mode)
+      (funcall 'tool-bar-setup))))
+
+(when (and (not (daemonp))
+           (not noninteractive))
+  (when (fboundp 'tool-bar-setup)
+    (advice-add 'tool-bar-setup :override #'ignore)
+
+    (advice-add 'startup--load-user-init-file :after
+                #'minimal-emacs--setup-toolbar)))
+
+(push '(tool-bar-lines . 0) default-frame-alist)
+(setq tool-bar-mode nil)
+
+(setq default-frame-scroll-bars 'right)
+(push '(vertical-scroll-bars) default-frame-alist)
+(push '(horizontal-scroll-bars) default-frame-alist)
+(setq scroll-bar-mode nil)
+
+(when (bound-and-true-p tooltip-mode)
+  (tooltip-mode -1))
+
+(setq use-file-dialog nil)
+(setq use-dialog-box nil)
+
+(setq gnutls-verify-error t)
+(setq tls-checktrust t)
+(setq gnutls-min-prime-bits 3072)
 
 (set-language-environment "UTF-8")
 
