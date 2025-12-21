@@ -55,7 +55,29 @@
         config = configForUsePackage;
         package = emacsBase;
         alwaysEnsure = true;
-        extraEmacsPackages = epkgs: [epkgs.use-package];
+        extraEmacsPackages = epkgs: let
+          orgModernIndent = epkgs.trivialBuild {
+            pname = "org-modern-indent";
+            version = "0.5.1";
+            src = pkgs.fetchFromGitHub {
+              owner = "jdtsmith";
+              repo = "org-modern-indent";
+              rev = "v0.5.1";
+              hash = "sha256-st3338Jk9kZ5BLEPRJZhjqdncMpLoWNwp60ZwKEObyU=";
+            };
+            packageRequires = [
+              epkgs.compat
+              epkgs.org
+            ];
+            nativeBuildInputs = [
+              epkgs.compat
+              epkgs.org
+            ];
+          };
+        in [
+          epkgs.use-package
+          orgModernIndent
+        ];
       };
 
       configDir = pkgs.linkFarm "emacs-config" [

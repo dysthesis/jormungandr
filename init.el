@@ -293,6 +293,21 @@
                            dired-find-alternate-file set-goal-column))
   (put cmd 'disabled nil))
 
+(use-package general
+  :demand t
+  :config
+  (general-create-definer start/leader-keys
+    :keymaps '(normal insert visual emacs)
+    :prefix "SPC"
+    :non-normal-prefix "C-SPC")
+  (general-evil-setup)
+  (general-define-key
+   :states '(normal visual insert emacs)
+   :prefix "SPC"
+   :non-normal-prefix "C-SPC"
+   "." '(find-file :wk "Find file")
+   "TAB" '(comment-line :wk "Comment lines")))
+
 (use-package meow
 :demand t
 ;:bind (("C-w s" . split-window-below)
@@ -395,6 +410,169 @@
 ;; Meow!
 (meow-global-mode 1))
 
+(use-package avy
+  :ensure t
+  :init
+  (defun dysthesis/avy-action-insert-newline (pt)
+    (save-excursion
+      (goto-char pt)
+      (newline))
+    (select-window
+     (cdr
+      (ring-ref avy-ring 0))))
+  (defun dysthesis/avy-action-kill-whole-line (pt)
+    (save-excursion
+      (goto-char pt)
+      (kill-whole-line))
+    (select-window
+     (cdr
+      (ring-ref avy-ring 0))))
+  (defun dysthesis/avy-action-embark (pt)
+    (unwind-protect
+        (save-excursion
+          (goto-char pt)
+          (embark-act))
+      (select-window
+       (cdr (ring-ref avy-ring 0))))
+    t) ;; adds an avy action for embark
+  :general
+  (general-def '(normal motion)
+    "s" 'evil-avy-goto-char-timer
+    "f" 'evil-avy-goto-char-in-line
+    "gl" 'evil-avy-goto-line ;; this rules
+    ";" 'avy-resume)
+  :config
+  (setf (alist-get ?. avy-dispatch-alist) 'dysthesis/avy-action-embark ;; embark integration
+        (alist-get ?i avy-dispatch-alist) 'dysthesis/avy-action-insert-newline
+        (alist-get ?K avy-dispatch-alist) 'dysthesis/avy-action-kill-whole-line)) ;; kill lines with avy
+
+(use-package vertico
+  :ensure t
+  :init
+  (vertico-mode))
+
+(savehist-mode) ;; Enables save history mode
+
+(use-package marginalia
+  :ensure t
+  :after vertico
+  :init
+  (marginalia-mode))
+
+(use-package orderless
+  :ensure t
+  :custom
+  (completion-styles '(orderless basic))
+  (orderless-matching-styles
+   '(orderless-literal
+     orderless-prefixes
+     orderless-initialism
+     orderless-regexp
+     orderless-flex                       ; Basically fuzzy finding
+     ;; orderless-strict-leading-initialism
+     ;; orderless-strict-initialism
+     ;; orderless-strict-full-initialism
+     ;; orderless-without-literal          ; Recommended for dispatches instead
+     ))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+
+(use-package consult
+  :ensure t
+  ;; Enable automatic preview at point in the *Completions* buffer. This is
+  ;; relevant when you use the default completion UI.
+  :hook (completion-list-mode . consult-preview-at-point-mode)
+  :init
+  (general-define-key
+   :states '(normal visual insert emacs)
+   :prefix "SPC"
+   :non-normal-prefix "C-SPC"
+   "f f" '(consult-fd :wk "Fd")
+   "f g" '(consult-ripgrep :wk "Ripgrep")
+   "f l" '(consult-line :wk "Find line")
+   "f i" '(consult-imenu :wk "Imenu"))
+  ;; Optionally configure the register formatting. This improves the register
+  ;; preview for `consult-register', `consult-register-load',
+  ;; `consult-register-store' and the Emacs built-ins.
+  (setq register-preview-delay 0.5
+        register-preview-function #'consult-register-format)
+
+  ;; Optionally tweak the register preview window.
+  ;; This adds thin lines, sorting and hides the mode line of the window.
+  (advice-add #'register-preview :override #'consult-register-window)
+
+  ;; Use Consult to select xref locations with preview
+  (setq xref-show-xrefs-function #'consult-xref
+        xref-show-definitions-function #'consult-xref)
+  :config
+  ;; Optionally configure preview. The default value
+  ;; is 'any, such that any key triggers the preview.
+  ;; (setq consult-preview-key 'any)
+  ;; (setq consult-preview-key "M-.")
+  ;; (setq consult-preview-key '("S-<down>" "S-<up>"))
+
+  ;; For some commands and buffer sources it is useful to configure the
+  ;; :preview-key on a per-command basis using the `consult-customize' macro.
+  ;; (consult-customize
+  ;; consult-theme :preview-key '(:debounce 0.2 any)
+  ;; consult-ripgrep consult-git-grep consult-grep
+  ;; consult-bookmark consult-recent-file consult-xref
+  ;; consult--source-bookmark consult--source-file-register
+  ;; consult--source-recent-file consult--source-project-recent-file
+  ;; :preview-key "M-."
+  ;; :preview-key '(:debounce 0.4 any))
+
+  ;; By default `consult-project-function' uses `project-root' from project.el.
+  ;; Optionally configure a different project root function.
+     ;;;; 1. project.el (the default)
+  ;; (setq consult-project-function #'consult--default-project--function)
+     ;;;; 2. vc.el (vc-root-dir)
+  ;; (setq consult-project-function (lambda (_) (vc-root-dir)))
+     ;;;; 3. locate-dominating-file
+  ;; (setq consult-project-function (lambda (_) (locate-dominating-file "." ".git")))
+     ;;;; 4. projectile.el (projectile-project-root)
+  (autoload 'projectile-project-root "projectile")
+  (setq consult-project-function (lambda (_) (projectile-project-root)))
+     ;;;; 5. No project support
+  ;; (setq consult-project-function nil)
+  )
+
+(use-package dashboard
+  :ensure t
+  :custom
+  (initial-buffer-choice (lambda () (get-buffer-create dashboard-buffer-name)))
+  (dashboard-banner-logo-title "Jormungandr")
+  (dashboard-center-content t)
+  (dashboard-vertically-center-content t)
+  (dashboard-startup-banner 'ascii)
+  (dashboard-banner-ascii
+   "                                          
+                                          
+                                           
+   ⣴⣶⣤⡤⠦⣤⣀⣤⠆     ⣈⣭⣿⣶⣿⣦⣼⣆             
+    ⠉⠻⢿⣿⠿⣿⣿⣶⣦⠤⠄⡠⢾⣿⣿⡿⠋⠉⠉⠻⣿⣿⡛⣦        
+          ⠈⢿⣿⣟⠦ ⣾⣿⣿⣷    ⠻⠿⢿⣿⣧⣄         
+           ⣸⣿⣿⢧ ⢻⠻⣿⣿⣷⣄⣀⠄⠢⣀⡀⠈⠙⠿⠄       
+          ⢠⣿⣿⣿⠈    ⣻⣿⣿⣿⣿⣿⣿⣿⣛⣳⣤⣀⣀      
+   ⢠⣧⣶⣥⡤⢄ ⣸⣿⣿⠘  ⢀⣴⣿⣿⡿⠛⣿⣿⣧⠈⢿⠿⠟⠛⠻⠿⠄  
+  ⣰⣿⣿⠛⠻⣿⣿⡦⢹⣿⣷   ⢊⣿⣿⡏  ⢸⣿⣿⡇ ⢀⣠⣄⣾⠄    
+ ⣠⣿⠿⠛ ⢀⣿⣿⣷⠘⢿⣿⣦⡀ ⢸⢿⣿⣿⣄ ⣸⣿⣿⡇⣪⣿⡿⠿⣿⣷⡄  
+ ⠙⠃   ⣼⣿⡟  ⠈⠻⣿⣿⣦⣌⡇⠻⣿⣿⣷⣿⣿⣿ ⣿⣿⡇ ⠛⠻⢷⣄  
+      ⢻⣿⣿⣄   ⠈⠻⣿⣿⣿⣷⣿⣿⣿⣿⣿⡟ ⠫⢿⣿⡆        
+       ⠻⣿⣿⣿⣿⣶⣶⣾⣿⣿⣿⣿⣿⣿⣿⣿⡟⢀⣀⣤⣾⡿⠃       
+")
+:config
+(dashboard-setup-startup-hook))
+
+(use-package olivetti
+  :ensure t
+  :config
+  (defun dysthesis/org-mode-setup ()
+    (org-indent-mode)
+    (olivetti-mode)
+    (display-line-numbers-mode 0)
+    (olivetti-set-width 90))
+  (add-hook 'org-mode-hook 'dysthesis/org-mode-setup))
+
 (use-package doom-modeline
   :ensure t
   :init (doom-modeline-mode 1)
@@ -412,10 +590,23 @@
  '(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height 90))))
  '(fixed-pitch ((t ( :family "JBMono Nerd Font" :height 90)))))
 
-(use-package tao-theme
+(use-package doom-themes
   :ensure t
-  :demand t
-  :config (load-theme 'tao-yin t))
+  :custom
+  ;; Global settings (defaults)
+  (doom-themes-enable-bold t)   ; if nil, bold is universally disabled
+  (doom-themes-enable-italic t) ; if nil, italics is universally disabled
+  :config
+  (load-theme 'doom-one t)
+
+  ;; Enable flashing mode-line on errors
+  (doom-themes-visual-bell-config)
+  ;; Enable custom neotree theme (nerd-icons must be installed!)
+  (doom-themes-neotree-config)
+  ;; or for treemacs users
+  (doom-themes-treemacs-config)
+  ;; Corrects (and improves) org-mode's native fontification.
+  (doom-themes-org-config))
 
 (use-package solaire-mode
   :ensure t
@@ -454,6 +645,115 @@
                   neo-file-link-face
                   org-scheduled-previously)))
   (add-hook 'mixed-pitch-mode-hook #'solaire-mode-reset))
+
+(use-package corfu
+  ;; Optional customizations
+  :ensure t
+  :custom
+  (corfu-popupinfo-mode 1)
+  (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
+  (corfu-auto t)                 ;; Enable auto completion
+  (corfu-auto-prefix 2)          ;; Minimum length of prefix for auto completion.
+  (corfu-popupinfo-mode t)       ;; Enable popup information
+  (corfu-popupinfo-delay 0.2)    ;; Lower popupinfo delay to 0.5 seconds from 2 seconds
+  (corfu-separator ?\s)          ;; Orderless field separator, Use M-SPC to enter separator
+  ;; (corfu-quit-at-boundary nil)   ;; Never quit at completion boundary
+  ;; (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
+  ;; (corfu-preview-current nil)    ;; Disable current candidate preview
+  ;; (corfu-preselect 'prompt)      ;; Preselect the prompt
+  ;; (corfu-on-exact-match nil)     ;; Configure handling of exact matches
+  ;; (corfu-scroll-margin 5)        ;; Use scroll margin
+  (completion-ignore-case t)
+  ;; Enable indentation+completion using the TAB key.
+  ;; `completion-at-point' is often bound to M-TAB.
+  (tab-always-indent 'complete)
+  (corfu-preview-current nil) ;; Don't insert completion without confirmation
+  ;; Recommended: Enable Corfu globally.  This is recommended since Dabbrev can
+  ;; be used globally (M-/).  See also the customization variable
+  ;; `global-corfu-modes' to exclude certain modes.
+  :init
+  (global-corfu-mode))
+
+(use-package nerd-icons-corfu
+  :ensure t
+  :after corfu
+  :init (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
+
+(use-package cape
+  :ensure t
+  :after corfu
+  :init
+  ;; Add to the global default value of `completion-at-point-functions' which is
+  ;; used by `completion-at-point'.  The order of the functions matters, the
+  ;; first function returning a result wins.  Note that the list of buffer-local
+  ;; completion functions takes precedence over the global list.
+  ;; The functions that are added later will be the first in the list
+
+  ;;(add-to-list 'completion-at-point-functions #'cape-dabbrev) ;; Complete word from current buffers
+  ;;(add-to-list 'completion-at-point-functions #'cape-dict) ;; Dictionary completion
+  (add-to-list 'completion-at-point-functions #'cape-file) ;; Path completion
+  (add-to-list 'completion-at-point-functions #'cape-elisp-block) ;; Complete elisp in Org or Markdown mode
+  (add-to-list 'completion-at-point-functions #'cape-keyword) ;; Keyword/Snipet completion
+
+  ;;(add-to-list 'completion-at-point-functions #'cape-abbrev) ;; Complete abbreviation
+  ;;(add-to-list 'completion-at-point-functions #'cape-history) ;; Complete from Eshell, Comint or minibuffer history
+  ;;(add-to-list 'completion-at-point-functions #'cape-line) ;; Complete entire line from current buffer
+  ;;(add-to-list 'completion-at-point-functions #'cape-elisp-symbol) ;; Complete Elisp symbol
+  ;;(add-to-list 'completion-at-point-functions #'cape-tex) ;; Complete Unicode char from TeX command, e.g. \hbar
+  ;;(add-to-list 'completion-at-point-functions #'cape-sgml) ;; Complete Unicode char from SGML entity, e.g., &alpha
+  ;;(add-to-list 'completion-at-point-functions #'cape-rfc1345) ;; Complete Unicode char using RFC 1345 mnemonics
+  )
+
+(use-package nerd-icons-completion
+  :ensure t
+  :after marginalia
+  :config
+  (nerd-icons-completion-mode)
+  :hook
+  (marginalia-mode-hook . nerd-icons-completion-marginalia-setup))
+
+;; Configure Tempel
+(use-package tempel
+  :ensure t
+  ;; Require trigger prefix before template name when completing.
+  ;; :custom
+  ;; (tempel-trigger-prefix "<")
+
+  :bind (("M-+" . tempel-complete) ;; Alternative tempel-expand
+         ("M-*" . tempel-insert)
+	 (:map tempel-map
+	       ([backtab] . tempel-previous)
+	       ([tab] . tempel-next)))
+  :init
+
+  ;; Setup completion at point
+  (defun tempel-setup-capf ()
+    ;; Add the Tempel Capf to `completion-at-point-functions'.
+    ;; `tempel-expand' only triggers on exact matches. Alternatively use
+    ;; `tempel-complete' if you want to see all matches, but then you
+    ;; should also configure `tempel-trigger-prefix', such that Tempel
+    ;; does not trigger too often when you don't expect it. NOTE: We add
+    ;; `tempel-expand' *before* the main programming mode Capf, such
+    ;; that it will be tried first.
+    (setq-local completion-at-point-functions
+                (cons #'tempel-expand
+                      completion-at-point-functions)))
+
+  (add-hook 'conf-mode-hook 'tempel-setup-capf)
+  (add-hook 'prog-mode-hook 'tempel-setup-capf)
+  (add-hook 'text-mode-hook 'tempel-setup-capf)
+
+  ;; Optionally make the Tempel templates available to Abbrev,
+  ;; either locally or globally. `expand-abbrev' is bound to C-x '.
+  ;; (add-hook 'prog-mode-hook #'tempel-abbrev-mode)
+  ;; (global-tempel-abbrev-mode)
+  )
+
+;; Optional: Add tempel-collection.
+;; The package is young and doesn't have comprehensive coverage.
+(use-package tempel-collection
+  :ensure t
+  :after tempel)
 
 (setq org-directory "~/Org/")
 
