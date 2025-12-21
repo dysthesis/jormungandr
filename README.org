@@ -1,0 +1,403 @@
+#+title: Emacs Configuration
+#+auto_tangle: true
+
+* Initialisation
+:PROPERTIES:
+:HEADER-ARGS:EMACS-LISP: :tangle early-init.el
+:END:
+
+This section defines and documents configurations of options related to the initialisation process of Emacs. This section was largely taken from [[https://github.com/jamescherti/minimal-emacs.d][jamescherti's minimal-emacs.d]].
+
+** Performance
+Compared to Vim, Emacs is a monolith and has a slower startup time and performance in general. Although this will not achieve the same speed as Vim, we can perform some optimisations to make it perform slightly faster.
+
+*** Increase garbage collection threshold
+The garbage collector can be made to tolerate a higher threshold, which would cause it to run less frequently than it otherwise would, and thus lower the overhead of garbage collection.
+
+This will cause the memory usage to spike, but this change is only done temporarily: we will restore the initial threshold once Emacs is done starting up.
+
+*** Back up the original threshold
+The threshold values are stored in two variables, namely
+
+- =gc-cons-threshold=, and
+- =gc-cons-percentage=.
+
+We need to temporarily make a backup before changing them.
+
+#+name: early-init-backup-threshold
+#+begin_src emacs-lisp
+(defvar emacs--backup-gc-cons-threshold gc-cons-threshold)
+(defvar emacs--backup-gc-cons-percentage gc-cons-percentage)
+#+end_src
+
+*** Temporarily increase the threshold
+Now that the original values are safely backed up, we increase the threshold to the absolute maximum value.
+
+#+name: early-init-increase-threshold
+#+begin_src emacs-lisp
+(setq gc-cons-threshold most-positive-fixnum)
+(setq gc-cons-percentage 1.0)
+#+end_src
+
+*** Restore the original value
+Later on, once initialisation is done, we restore the original value that we backed up.
+
+#+name: early-init-restore-threshold
+#+begin_src emacs-lisp
+(defun emacs--restore-gc-values ()
+  "Restore garbage collection values to the original defaults."
+  (setq gc-cons-threshold emacs--backup-gc-cons-threshold)
+  (setq gc-cons-percentage emacs--backup-gc-cons-percentage))
+#+end_src
+
+*** Native compilation and byte-compilation
+If the current build of Emacs supports the native compilation of Emacs Lisp code, enable the native compilation of packages in order to achieve better performance.
+
+#+begin_src emacs-lisp
+(if ;; if native compilation is available in the current build...
+    (and (featurep 'native-compile)
+         (fboundp 'native-comp-available-p)
+         (native-comp-available-p))
+    ;; ...enable native compilation of packages...
+    (setq package-native-compile t)
+  ;; ...otherwise delete it from the list of features.
+  (setq features (delq 'native-compile features)))
+#+end_src
+
+**** Silence native compilation warnings
+Silence warnings that may arise if
+
+- the byte-compiled code does not have the associated source code present, or
+- there is an error that happens during the native compilation process (we can the original source code anyways, just a bit slower).
+
+#+begin_src emacs-lisp
+(setq native-comp-warning-on-missing-source nil
+      native-comp-async-report-warnings-errors nil
+      byte-compile-warnings nil
+      byte-compile-verbose nil)
+
+#+end_src
+
+We also do not want Emacs to report if we are decompressing files.
+
+#+begin_src emacs-lisp
+(setq jka-compr-verbose nil)
+#+end_src
+
+*** Reduce timeout in PGTK
+Emacs will wait up to some maximum timeout to receive some GTK events after making changes which affect the state of the graphical interface. In PGTK, this timeout introduces latency. Reducing it from the default 0.1 improves responsiveness of childframes and related packages.
+
+#+begin_src emacs-lisp
+(when (boundp 'pgtk-wait-for-event-timeout)
+  (setq pgtk-wait-for-event-timeout 0.001))
+#+end_src
+
+*** Disable font cache compacting
+Font compacting can be very resource-intensive, especially when rendering icon fonts on Windows. Therefore, this is disabled for performance sake.
+
+However, disabling compaction of font caches might enlarge the Emacs memory footprint in sessions that use lots of different fonts.
+
+#+begin_src emacs-lisp
+(setq inhibit-compacting-font-caches t)
+#+end_src
+
+*** Optimisations for interactive, non-daemon instances
+This section defines some options that are evaluated when running an interactive instance of Emacs.
+
+**** Resize frames pixelwise
+Resizing frames can be costly when changing font. Disable this to improve startup tijmes with fonts larger than the system default. Allow frame sizes to increase/decrease by one pixel. Do not perform any rounding.
+
+#+name: early-init-frame-resize-pixelwise
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq frame-resize-pixelwise t)
+#+end_src
+
+**** Do not resize frames implicitly
+Prevent Emacs from resizing itself to a specific column size.  The size of fullscreen and maximised frames, the height of fullheight frames and the width of fullwidth frames never change implicitly.
+
+#+name: early-init-frame-inhibit-implied-resize
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq frame-inhibit-implied-resize t)
+#+end_src
+
+**** Do not do  a second pass over =auto-mode-alist=.
+A second, case-insensitive pass over =auto-mode-alist= is time wasted. No second pass of case insensitive search over =auto-mode-alist= should be done.
+
+#+name: early-init-auto-mode-case-fold
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq auto-mode-case-fold nil)
+#+end_src
+
+**** Reduce =*Message*= noise at startup.
+An empty scratch buffer, or the dashboard, is more than enough, and is faster to display.
+
+#+name: early-init-reduce-message-noise
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq inhibit-startup-screen t
+      inhibit-startup-echo-area-message user-login-name
+      initial-buffer-choice nil
+      inhibit-startup-buffer-menu t
+      inhibit-x-resources t)
+#+end_src
+
+**** Disable bidirectional text scanning
+I personally do not use bidirectional text scanning. Hence, it is disabled for some performance boost.
+
+#+name: early-init-disable-bidi
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq bidi-display-reordering 'left-to-right
+              bidi-paragraph-direction 'left-to-right
+              bidi-inhibit-bpa t)
+#+end_src
+
+**** Disable "For information about GNU Emacs..." message at startup
+#+name: early-init-disable-startup-echo-message
+#+begin_src emacs-lisp :tangle no :noweb yes
+(advice-add 'display-startup-echo-area-message :override #'ignore)
+#+end_src
+
+**** Suppress the vanilla startup screen
+#+name: early-init-disable-startup-screen
+#+begin_src emacs-lisp :tangle no :noweb yes
+(advice-add 'display-startup-screen :override #'ignore)
+#+end_src
+
+**** Use a low overhead mode as the initial major mode
+Th initial buffer is created during startup even in non-interactive sesions, and its major mode is fully initialised. Modes like =text-mode=, =org-mode=, or even the default =lisp-interaction-mode= loads extra packages and runs hooks, slowing down startup. Therefore, we set =fundamental-mode= for the initial buffer to avoid unnecessary startup overhead.
+
+#+name: early-init-initial-major-mode
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq initial-major-mode 'fundamental-mode
+      initial-scratch-message nil)
+#+end_src
+**** Unset irrelevant command line options
+This option is useless on non-macOS systems.
+
+#+name: early-init-disable-macos-exclusive-option
+#+begin_src emacs-lisp :tangle no :noweb yes
+(unless (eq system-type 'darwin)
+  (setq command-line-ns-option-alist nil))
+#+end_src
+
+And this option is useless on non-XOrg window managers..
+
+#+name: early-init-disable-xorg-exclusive-option
+#+begin_src emacs-lisp :tangle no :noweb yes
+(unless (memq initial-window-system '(x pgtk))
+  (setq command-line-x-option-alist nil))
+#+end_src
+
+**** Putting it all together
+#+begin_src emacs-lisp :noweb yes
+(when (and (not (daemonp))
+           (not noninteractive))
+  <<early-init-frame-resize-pixelwise>>
+  <<early-init-frame-inhibit-implied-resize>>
+  <<early-init-auto-mode-case-fold>>
+  <<early-init-reduce-message-noise>>
+  <<early-init-disable-bidi>>
+  <<early-init-disable-startup-echo-message>>
+  <<early-init-disable-startup-screen>>
+  <<early-init-initial-major-mode>>
+  <<early-init-disable-macos-exclusive-option>>
+  <<early-init-disable-xorg-exclusive-option>>)
+#+end_src
+
+*** File name handler
+#+begin_src emacs-lisp
+(defvar emacs--old-file-name-handler-alist (default-toplevel-value
+                                            'file-name-handler-alist))
+
+(defun emacs--respect-file-handlers (fn args-left)
+  "Respect file handlers.
+FN is the function and ARGS-LEFT is the same argument as `command-line-1'.
+Emacs processes command-line files very early in startup. These files may
+include special paths like TRAMP paths, so restore `file-name-handler-alist' for
+this stage of initialization."
+  (let ((file-name-handler-alist (if args-left
+                                     emacs--old-file-name-handler-alist
+                                   file-name-handler-alist)))
+    (funcall fn args-left)))
+
+(defun emacs--restore-file-name-handler-alist ()
+  "Restore `file-name-handler-alist'."
+  (set-default-toplevel-value
+   'file-name-handler-alist
+   ;; Merge instead of overwrite to preserve any changes made since startup.
+   (delete-dups (append file-name-handler-alist
+                        emacs--old-file-name-handler-alist))))
+
+(when (and emacs-optimize-file-name-handler-alist
+           (not (daemonp))
+           (not emacs-debug))
+  ;; Determine the state of bundled libraries using calc-loaddefs.el. If
+  ;; compressed, retain the gzip handler in `file-name-handler-alist`. If
+  ;; compiled or neither, omit the gzip handler during startup for improved
+  ;; startup and package load time.
+  (set-default-toplevel-value
+   'file-name-handler-alist
+   (if (locate-file-internal "calc-loaddefs.el" load-path)
+       nil
+     (list (rassq 'jka-compr-handler
+                  emacs--old-file-name-handler-alist))))
+
+  ;; Ensure the new value persists through any current let-binding.
+  (put 'file-name-handler-alist 'initial-value
+       emacs--old-file-name-handler-alist)
+
+  ;; Emacs processes command-line files very early in startup. These files may
+  ;; include special paths TRAMP. Restore `file-name-handler-alist'.
+  (advice-add 'command-line-1 :around #'emacs--respect-file-handlers)
+
+  (add-hook 'emacs-startup-hook #'emacs--restore-file-name-handler-alist
+            101))
+#+end_src
+
+*** Inhibit redisplay
+#+begin_src emacs-lisp
+(defun emacs--reset-inhibit-redisplay ()
+  "Reset inhibit redisplay."
+  (setq-default inhibit-redisplay nil)
+  (remove-hook 'post-command-hook #'minimal-emacs--reset-inhibit-redisplay))
+
+(when (and (not (daemonp))
+           (not noninteractive)
+           (not minimal-emacs-debug))
+  ;; Suppress redisplay and redraw during startup to avoid delays and
+  ;; prevent flashing an unstyled Emacs frame.
+  (setq-default inhibit-redisplay t)
+  (add-hook 'post-command-hook #'minimal-emacs--reset-inhibit-redisplay -100))
+#+end_src
+
+*** Inhibit message
+#+begin_src emacs-lisp
+(defun minimal-emacs--reset-inhibit-message ()
+  "Reset inhibit message."
+  (setq-default inhibit-message nil)
+  (remove-hook 'post-command-hook #'minimal-emacs--reset-inhibit-message))
+
+(when (and (not (daemonp))
+           (not noninteractive)
+           (not minimal-emacs-debug))
+  (setq-default inhibit-message t)
+  (add-hook 'post-command-hook #'minimal-emacs--reset-inhibit-message -100))
+#+end_src
+
+*** Disable modeline during startup
+#+begin_src emacs-lisp
+(when (and (not (daemonp))
+           (not noninteractive)
+           (not minimal-emacs-debug))
+  (put 'mode-line-format
+       'initial-value (default-toplevel-value 'mode-line-format))
+  (setq-default mode-line-format nil)
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+      (setq mode-line-format nil))))
+#+end_src
+
+** UI elements
+#+begin_src emacs-lisp
+(setq frame-title-format minimal-emacs-frame-title-format
+      icon-title-format minimal-emacs-frame-title-format)
+
+;; Disable startup screens and messages
+(setq inhibit-splash-screen t)
+
+;; I intentionally avoid calling `menu-bar-mode', `tool-bar-mode', and
+;; `scroll-bar-mode' because manipulating frame parameters can trigger or queue
+;; a superfluous and potentially expensive frame redraw at startup, depending
+;; on the window system. The variables must also be set to `nil' so users don't
+;; have to call the functions twice to re-enable them.
+(unless (push '(menu-bar-lines . 0) default-frame-alist)
+  (unless (memq window-system '(mac ns))
+    (setq menu-bar-mode nil)))
+
+(defun minimal-emacs--setup-toolbar (&rest _)
+  "Setup the toolbar."
+  (when (fboundp 'tool-bar-setup)
+    (advice-remove 'tool-bar-setup #'ignore)
+    (when (bound-and-true-p tool-bar-mode)
+      (funcall 'tool-bar-setup))))
+
+(when (and (not (daemonp))
+           (not noninteractive))
+  (when (fboundp 'tool-bar-setup)
+    ;; Temporarily override the tool-bar-setup function to prevent it from
+    ;; running during the initial stages of startup
+    (advice-add 'tool-bar-setup :override #'ignore)
+
+    (advice-add 'startup--load-user-init-file :after
+                #'minimal-emacs--setup-toolbar)))
+
+(push '(tool-bar-lines . 0) default-frame-alist)
+(setq tool-bar-mode nil)
+
+(setq default-frame-scroll-bars 'right)
+(push '(vertical-scroll-bars) default-frame-alist)
+(push '(horizontal-scroll-bars) default-frame-alist)
+(setq scroll-bar-mode nil)
+
+(when (bound-and-true-p tooltip-mode)
+  (tooltip-mode -1))
+
+(setq use-file-dialog nil)
+(setq use-dialog-box nil)
+#+end_src
+
+** Security
+#+begin_src emacs-lisp
+(setq gnutls-verify-error t)  ; Prompts user if there are certificate issues
+(setq tls-checktrust t)  ; Ensure SSL/TLS connections undergo trust verification
+(setq gnutls-min-prime-bits 3072)  ; Stronger GnuTLS encryption
+#+end_src
+** Miscellaneous
+*** Default encoding
+This is 2026, use UTF-8 encoding.
+
+#+begin_src emacs-lisp
+(set-language-environment "UTF-8")
+#+end_src
+
+*** Increase maximum process read threshold
+Increase the maximum number of bytes to read from subprocess in a single chunk. This is useful if the subprocess generates very large (megabytes) amounts of data in one go.
+
+We increase it to 1024 kB.
+
+#+begin_src emacs-lisp
+(setq read-process-output-max
+      (* 2 1024 1024))
+#+end_src
+
+Tell Emacs to immediately read outputs from subprocesses. Do not batch them even if the ouptuts are small.
+
+#+begin_src emacs-lisp
+(setq process-adaptive-read-buffering nil)
+#+end_src
+
+*** Prevent pinging hostnames that have a known domain.
+
+#+begin_src emacs-lisp
+(setq ffap-machine-p-known 'reject)
+#+end_src
+
+*** Silence warnings
+Increase the severity threshold at which Emacs reports diagnostics.
+
+#+begin_src emacs-lisp
+(setq warning-minimum-level :error
+      warning-suppress-types '((lexical-binding)))
+#+end_src
+
+Disable warnings from the legacy advice API as well.
+
+#+begin_src emacs-lisp
+(setq ad-redefinition-action 'accept)
+#+end_src
+
+** Conclusion
+Restore the original value of the garbage collection parameters.
+
+#+begin_src emacs-lisp
+(emacs--restore-gc-values)
+#+end_src
