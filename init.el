@@ -292,3 +292,273 @@
                            list-threads erase-buffer scroll-left
                            dired-find-alternate-file set-goal-column))
   (put cmd 'disabled nil))
+
+(use-package meow
+:demand t
+;:bind (("C-w s" . split-window-below)
+;       ("C-w v" . split-window-right)
+;       ("C-w c" . delete-window))
+:config
+(setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
+      meow-use-clipboard t)
+
+(meow-motion-overwrite-define-key
+ '("j" . meow-next)
+ '("k" . meow-prev)
+ '("<escape>" . ignore))
+
+(meow-leader-define-key
+ ;; SPC j/k will run the original command in MOTION state.
+ '("j" . "H-j")
+ '("k" . "H-k")
+
+ ;; Use SPC (0-9) for digit arguments.
+ '("1" . meow-digit-argument)
+ '("2" . meow-digit-argument)
+ '("3" . meow-digit-argument)
+ '("4" . meow-digit-argument)
+ '("5" . meow-digit-argument)
+ '("6" . meow-digit-argument)
+ '("7" . meow-digit-argument)
+ '("8" . meow-digit-argument)
+ '("9" . meow-digit-argument)
+ '("0" . meow-digit-argument)
+ '("/" . meow-keypad-describe-key)
+ '("?" . meow-cheatsheet))
+
+(meow-normal-define-key
+ '("0" . meow-expand-0)
+ '("9" . meow-expand-9)
+ '("8" . meow-expand-8)
+ '("7" . meow-expand-7)
+ '("6" . meow-expand-6)
+ '("5" . meow-expand-5)
+ '("4" . meow-expand-4)
+ '("3" . meow-expand-3)
+ '("2" . meow-expand-2)
+ '("1" . meow-expand-1)
+ '("-" . negative-argument)
+ '(";" . meow-reverse)
+ '("," . meow-inner-of-thing)
+ '("." . meow-bounds-of-thing)
+ '("[" . meow-beginning-of-thing)
+ '("]" . meow-end-of-thing)
+ '("a" . meow-append)
+ '("A" . meow-open-below)
+ '("b" . meow-back-word)
+ '("B" . meow-back-symbol)
+ '("c" . meow-change)
+ '("d" . meow-delete)
+ '("D" . meow-backward-delete)
+ '("e" . meow-next-word)
+ '("E" . meow-next-symbol)
+ '("f" . meow-find)
+ '("g" . meow-cancel-selection)
+ '("G" . meow-grab)
+ '("h" . meow-left)
+ '("H" . meow-left-expand)
+ '("i" . meow-insert)
+ '("I" . meow-open-above)
+ '("j" . meow-next)
+ '("J" . meow-next-expand)
+ '("k" . meow-prev)
+ '("K" . meow-prev-expand)
+ '("l" . meow-right)
+ '("L" . meow-right-expand)
+ '("m" . meow-join)
+ '("n" . meow-search)
+ '("o" . meow-block)
+ '("O" . meow-to-block)
+ '("p" . meow-yank)
+ '("q" . meow-quit)
+ '("Q" . meow-goto-line)
+ '("r" . meow-replace)
+ '("R" . meow-swap-grab)
+ '("s" . meow-kill)
+ '("t" . meow-till)
+ '("u" . meow-undo)
+ '("U" . meow-undo-in-selection)
+ '("v" . meow-visit)
+ '("w" . meow-mark-word)
+ '("W" . meow-mark-symbol)
+ '("x" . meow-line)
+ '("X" . meow-goto-line)
+ '("y" . meow-save)
+ '("Y" . meow-sync-grab)
+ '("z" . meow-pop-selection)
+ '("'" . repeat)
+ '("<escape>" . ignore))
+
+;; Add support for arrows as a surround pair
+(meow-thing-register 'arrow '(pair ("<") (">")) '(pair ("<") (">")))
+(add-to-list 'meow-char-thing-table '(?a . arrow))
+;; Meow!
+(meow-global-mode 1))
+
+(use-package doom-modeline
+  :ensure t
+  :init (doom-modeline-mode 1)
+  :custom
+  (doom-modeline-height 30)
+  (doom-modeline-bar-width 4)
+  (doom-modeline-persp-name t)
+  (doom-modeline-persp-icon t))
+
+(set-face-attribute 'default nil :font "JBMono Nerd Font" :height 90)
+(set-fontset-font t nil (font-spec :size 10 :name "JBMono Nerd Font"))
+(setq-default line-spacing 0.2)
+(custom-theme-set-faces
+ 'user
+ '(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height 90))))
+ '(fixed-pitch ((t ( :family "JBMono Nerd Font" :height 90)))))
+
+(use-package tao-theme
+  :ensure t
+  :demand t
+  :config (load-theme 'tao-yin t))
+
+(use-package solaire-mode
+  :ensure t
+  :config
+  (solaire-global-mode +1))
+
+(setq display-line-numbers-type 'relative)
+
+(use-package mixed-pitch
+  :hook
+  ;; You might want to enable it only in org-mode or both text-mode and org-mode
+  ((org-mode) . mixed-pitch-mode)
+  ((markdown-mode) . mixed-pitch-mode)
+  :config
+  (setq mixed-pitch-fixed-pitch-faces
+        (append mixed-pitch-fixed-pitch-faces
+                '(org-table
+                  org-code
+                  org-block
+                  org-block-begin-line
+                  org-block-end-line
+                  org-meta-line
+                  org-document-info-keyword
+                  org-tag
+                  org-time-grid
+                  org-todo
+                  org-done
+                  org-agenda-date
+                  org-date
+                  org-drawer
+                  org-modern-tag
+                  org-modern-done
+                  org-modern-label
+                  org-scheduled
+                  org-scheduled-today
+                  neo-file-link-face
+                  org-scheduled-previously)))
+  (add-hook 'mixed-pitch-mode-hook #'solaire-mode-reset))
+
+(setq org-directory "~/Org/")
+
+(setq org-ellipsis " ↪")
+
+(setq org-pretty-entities t)
+
+(setq org-startup-folded t)
+
+(package-initialize)
+(menu-bar-mode -1)
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+(dolist (face '(window-divider
+                window-divider-first-pixel
+                window-divider-last-pixel))
+  (face-spec-reset-face face)
+  (set-face-foreground face (face-attribute 'default :background)))
+(set-face-background 'fringe (face-attribute 'default :background))
+
+(setq org-hide-emphasis-markers t)
+
+(setq  org-modern-list
+       '((42 . "•")
+         (43 . "◈")
+         (45 . "➤")))
+
+(setq org-modern-block-name
+      '((t . t)
+        ("src" "»" "«")
+        ("example" "»–" "–«")
+        ("quote" "" "")
+        ("export" "⏩" "⏪")))
+
+(setq org-modern-block-fringe 6)
+
+(when (require 'org-modern-indent nil 'noerror)
+  (add-hook 'org-mode-hook #'org-modern-indent-mode 90))
+
+(setq org-modern-keyword
+ '((t . t)
+   ("title" . "𝙏 ")
+   ("filetags" . "󰓹 ")
+   ("auto_tangle" . "󱋿 ")
+   ("subtitle" . "𝙩 ")
+   ("author" . "𝘼 ")
+   ("email" . #(" " 0 1 (display (raise -0.14))))
+   ("date" . "𝘿 ")
+   ("property" . "☸ ")
+   ("options" . "⌥ ")
+   ("startup" . "⏻ ")
+   ("macro" . "𝓜 ")
+   ("bind" . #(" " 0 1 (display (raise -0.1))))
+   ("bibliography" . " ")
+   ("print_bibliography" . #(" " 0 1 (display (raise -0.1))))
+   ("cite_export" . "⮭ ")
+   ("print_glossary" . #("ᴬᶻ " 0 1 (display (raise -0.1))))
+   ("glossary_sources" . #(" " 0 1 (display (raise -0.14))))
+   ("include" . "⇤ ")
+   ("setupfile" . "⇚ ")
+   ("html_head" . "🅷 ")
+   ("html" . "🅗 ")
+   ("latex_class" . "🄻 ")
+   ("latex_class_options" . #("🄻 " 1 2 (display (raise -0.14))))
+   ("latex_header" . "🅻 ")
+   ("latex_header_extra" . "🅻⁺ ")
+   ("latex" . "🅛 ")
+   ("beamer_theme" . "🄱 ")
+   ("beamer_color_theme" . #("🄱 " 1 2 (display (raise -0.12))))
+   ("beamer_font_theme" . "🄱𝐀 ")
+   ("beamer_header" . "🅱 ")
+   ("beamer" . "🅑 ")
+   ("attr_latex" . "🄛 ")
+   ("attr_html" . "🄗 ")
+   ("attr_org" . "⒪ ")
+   ("call" . #(" " 0 1 (display (raise -0.15))))
+   ("name" . "⁍ ")
+   ("header" . "› ")
+   ("caption" . "☰ ")
+   ("results" . "🠶")))
+
+(setq org-agenda-tags-column 0
+      org-agenda-block-separator ?─
+      org-agenda-time-grid
+      '((daily today require-timed)
+        (800 1000 1200 1400 1600 1800 2000)
+        " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+      org-agenda-current-time-string
+      "⭠ now ─────────────────────────────────────────────────")
+
+(setq org-modern-todo-faces
+ '(("WAIT"
+    :inverse-video t
+    :inherit +org-todo-onhold)
+   ("NEXT"
+    :inverse-video t
+    :foreground "#89b4fa")
+   ("PROG"
+    :inverse-video t
+    :foreground "#a6e3a1")
+   ("TODO"
+    :inverse-video t
+    :foreground "#fab387")))
+
+(use-package org-modern
+  :demand t
+  :config
+  (global-org-modern-mode 1))

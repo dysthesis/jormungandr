@@ -30,14 +30,21 @@
       pkgs = mkPkgs system;
 
       # emacs-overlay parses the config in Nix, which is brittle with
-      # non-ASCII characters. Keep runtime config untouched, but sanitise
-      # the text used for dependency inference.
+      # non-ASCII characters and some Emacs reader constructs. Keep the
+      # runtime config untouched, but sanitise the text used for
+      # dependency inference.
       configForUsePackage = let
         raw = builtins.readFile ./init.el;
-        chars = pkgs.lib.stringToCharacters raw;
-        asciiOnly = builtins.filter (c: builtins.stringLength c == 1) chars;
+        preprocessed = builtins.replaceStrings ["#(" "?─"] ["(" "?-"] raw;
+        len = builtins.stringLength preprocessed;
+        bytes = builtins.genList (i: builtins.substring i 1 preprocessed) len;
+        asciiBytes = builtins.map (b:
+          if (builtins.match "[ -~]" b != null) || (b == "\n") || (b == "\t") || (b == "\r")
+          then b
+          else " ")
+        bytes;
       in
-        pkgs.lib.concatStrings asciiOnly;
+        builtins.concatStringsSep "" asciiBytes;
 
       emacsBase =
         if (!pkgs.stdenv.isDarwin) && (builtins.hasAttr "emacs-gtk" pkgs)

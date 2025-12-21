@@ -1054,3 +1054,373 @@ temporary buffers and tag files.
                            dired-find-alternate-file set-goal-column))
   (put cmd 'disabled nil))
 #+end_src
+
+** Navigation
+*** Meow
+
+#+begin_src emacs-lisp
+  (use-package meow
+  :demand t
+  ;:bind (("C-w s" . split-window-below)
+  ;       ("C-w v" . split-window-right)
+  ;       ("C-w c" . delete-window))
+  :config
+  (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
+        meow-use-clipboard t)
+
+  (meow-motion-overwrite-define-key
+   '("j" . meow-next)
+   '("k" . meow-prev)
+   '("<escape>" . ignore))
+
+  (meow-leader-define-key
+   ;; SPC j/k will run the original command in MOTION state.
+   '("j" . "H-j")
+   '("k" . "H-k")
+
+   ;; Use SPC (0-9) for digit arguments.
+   '("1" . meow-digit-argument)
+   '("2" . meow-digit-argument)
+   '("3" . meow-digit-argument)
+   '("4" . meow-digit-argument)
+   '("5" . meow-digit-argument)
+   '("6" . meow-digit-argument)
+   '("7" . meow-digit-argument)
+   '("8" . meow-digit-argument)
+   '("9" . meow-digit-argument)
+   '("0" . meow-digit-argument)
+   '("/" . meow-keypad-describe-key)
+   '("?" . meow-cheatsheet))
+
+  (meow-normal-define-key
+   '("0" . meow-expand-0)
+   '("9" . meow-expand-9)
+   '("8" . meow-expand-8)
+   '("7" . meow-expand-7)
+   '("6" . meow-expand-6)
+   '("5" . meow-expand-5)
+   '("4" . meow-expand-4)
+   '("3" . meow-expand-3)
+   '("2" . meow-expand-2)
+   '("1" . meow-expand-1)
+   '("-" . negative-argument)
+   '(";" . meow-reverse)
+   '("," . meow-inner-of-thing)
+   '("." . meow-bounds-of-thing)
+   '("[" . meow-beginning-of-thing)
+   '("]" . meow-end-of-thing)
+   '("a" . meow-append)
+   '("A" . meow-open-below)
+   '("b" . meow-back-word)
+   '("B" . meow-back-symbol)
+   '("c" . meow-change)
+   '("d" . meow-delete)
+   '("D" . meow-backward-delete)
+   '("e" . meow-next-word)
+   '("E" . meow-next-symbol)
+   '("f" . meow-find)
+   '("g" . meow-cancel-selection)
+   '("G" . meow-grab)
+   '("h" . meow-left)
+   '("H" . meow-left-expand)
+   '("i" . meow-insert)
+   '("I" . meow-open-above)
+   '("j" . meow-next)
+   '("J" . meow-next-expand)
+   '("k" . meow-prev)
+   '("K" . meow-prev-expand)
+   '("l" . meow-right)
+   '("L" . meow-right-expand)
+   '("m" . meow-join)
+   '("n" . meow-search)
+   '("o" . meow-block)
+   '("O" . meow-to-block)
+   '("p" . meow-yank)
+   '("q" . meow-quit)
+   '("Q" . meow-goto-line)
+   '("r" . meow-replace)
+   '("R" . meow-swap-grab)
+   '("s" . meow-kill)
+   '("t" . meow-till)
+   '("u" . meow-undo)
+   '("U" . meow-undo-in-selection)
+   '("v" . meow-visit)
+   '("w" . meow-mark-word)
+   '("W" . meow-mark-symbol)
+   '("x" . meow-line)
+   '("X" . meow-goto-line)
+   '("y" . meow-save)
+   '("Y" . meow-sync-grab)
+   '("z" . meow-pop-selection)
+   '("'" . repeat)
+   '("<escape>" . ignore))
+
+  ;; Add support for arrows as a surround pair
+  (meow-thing-register 'arrow '(pair ("<") (">")) '(pair ("<") (">")))
+  (add-to-list 'meow-char-thing-table '(?a . arrow))
+  ;; Meow!
+  (meow-global-mode 1))
+#+end_src
+
+** Appearance
+*** Modeline
+#+begin_src emacs-lisp
+  (use-package doom-modeline
+    :ensure t
+    :init (doom-modeline-mode 1)
+    :custom
+    (doom-modeline-height 30)
+    (doom-modeline-bar-width 4)
+    (doom-modeline-persp-name t)
+    (doom-modeline-persp-icon t))
+#+end_src
+
+*** Fonts
+#+begin_src emacs-lisp
+  (set-face-attribute 'default nil :font "JBMono Nerd Font" :height 90)
+  (set-fontset-font t nil (font-spec :size 10 :name "JBMono Nerd Font"))
+  (setq-default line-spacing 0.2)
+  (custom-theme-set-faces
+   'user
+   '(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height 90))))
+   '(fixed-pitch ((t ( :family "JBMono Nerd Font" :height 90)))))
+#+end_src
+
+*** Theme
+
+#+begin_src emacs-lisp
+  (use-package tao-theme
+    :ensure t
+    :demand t
+    :config (load-theme 'tao-yin t))
+#+end_src
+
+Use a secondary theme to distinguish between 'real' buffers and everything else.
+
+#+begin_src emacs-lisp
+  (use-package solaire-mode
+    :ensure t
+    :config
+    (solaire-global-mode +1))
+#+end_src
+
+*** Line numbering
+Set the line numbering to =relative= for easy Vim motions.
+
+#+begin_src emacs-lisp
+(setq display-line-numbers-type 'relative)
+#+end_src
+
+*** Mixed pitch
+
+#+begin_src emacs-lisp
+(use-package mixed-pitch
+  :hook
+  ;; You might want to enable it only in org-mode or both text-mode and org-mode
+  ((org-mode) . mixed-pitch-mode)
+  ((markdown-mode) . mixed-pitch-mode)
+  :config
+  (setq mixed-pitch-fixed-pitch-faces
+        (append mixed-pitch-fixed-pitch-faces
+                '(org-table
+                  org-code
+                  org-block
+                  org-block-begin-line
+                  org-block-end-line
+                  org-meta-line
+                  org-document-info-keyword
+                  org-tag
+                  org-time-grid
+                  org-todo
+                  org-done
+                  org-agenda-date
+                  org-date
+                  org-drawer
+                  org-modern-tag
+                  org-modern-done
+                  org-modern-label
+                  org-scheduled
+                  org-scheduled-today
+                  neo-file-link-face
+                  org-scheduled-previously)))
+  (add-hook 'mixed-pitch-mode-hook #'solaire-mode-reset))
+#+end_src
+
+* Org-mode
+:PROPERTIES:
+:HEADER-ARGS:EMACS-LISP: :tangle init.el
+:END:
+
+Tell Emacs where our Org-mode documents are stored.
+#+begin_src emacs-lisp
+(setq org-directory "~/Org/")
+#+end_src
+
+The default three-dots (=...=) icons doesn't really look that great, so change it to an arrow symbol instead.
+#+begin_src emacs-lisp
+(setq org-ellipsis " ↪")
+#+end_src
+
+Show entities as UTF-8 characters.
+#+begin_src emacs-lisp
+(setq org-pretty-entities t)
+#+end_src
+
+Start an Org file with all headers collapsed.
+#+begin_src emacs-lisp
+(setq org-startup-folded t)
+#+end_src
+
+
+** Org-modern
+An alternative to this package is Doom's built-in =+pretty= module for Org. It doesn't do enough for my tastes, however, while Org-modern does. Most of the code in this section are simply taken from Org-modern's README, as well as [[https://tecosaur.github.io/emacs-config/config.html][Tecosaur's Doom Emacs configuration]].
+
+*** Initialisation
+These functions are not part of Org-modern, but complements it quite well.
+#+begin_src emacs-lisp
+(package-initialize)
+(menu-bar-mode -1)
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+(dolist (face '(window-divider
+                window-divider-first-pixel
+                window-divider-last-pixel))
+  (face-spec-reset-face face)
+  (set-face-foreground face (face-attribute 'default :background)))
+(set-face-background 'fringe (face-attribute 'default :background))
+#+end_src
+
+*** Hide emphasis markers
+By default, Org-mode always displays emphasis markers and other such elements, which may become bothersome. It is possible to entirely disable them, such as with =org-hide-emphasis-markers=, however, that may also eventually lead to confusion during editing. Therefore, use the =org-appear= package to automatically toggle the visibility of these elements when hovered over by the cursor.
+
+#+begin_src emacs-lisp
+(setq org-hide-emphasis-markers t)
+#+end_src
+
+*** Prettier bullets
+The default Org-mode bullets don't look nice at all. Org-modern allows for the substitution of these with different symbols.
+
+#+begin_src emacs-lisp
+(setq  org-modern-list
+       '((42 . "•")
+         (43 . "◈")
+         (45 . "➤")))
+#+end_src
+
+[[https://www.youtube.com/watch?v=vVPT0JT1dOw][The numbers, mason, what do they mean?!]]
+
+- =45= is the dash (=-=) bullet,
+- =43= is the plus (=+=) bullet,
+- and =42= is the asterisk (=*=) bullet.
+
+*** Substitute block names with symbols
+Org-modern allows for the substitution of block names within Org-mode, such as =src=, =quote=, etc., with symbols. This is more visually pleasing.
+
+#+begin_src emacs-lisp
+(setq org-modern-block-name
+      '((t . t)
+        ("src" "»" "«")
+        ("example" "»–" "–«")
+        ("quote" "" "")
+        ("export" "⏩" "⏪")))
+#+end_src
+
+*** Block fringe
+Add a fringe to the left side of Org-mode blocks for stylistic purposes. The integer represents the margin between the fringe and the text.
+
+#+begin_src emacs-lisp
+(setq org-modern-block-fringe 6)
+#+end_src
+
+Use the =org-modern-indent= package to fix block fringes when indented.
+#+begin_src emacs-lisp
+(when (require 'org-modern-indent nil 'noerror)
+  (add-hook 'org-mode-hook #'org-modern-indent-mode 90))
+#+end_src
+
+*** Substitute keywords with symbols
+It is also possible to substitute entire keywords instead of just block names. This is useful for making elements such as document metadatas (=#+title=, =#+property=, etc.) more visually pleasing.
+
+#+begin_src emacs-lisp
+(setq org-modern-keyword
+ '((t . t)
+   ("title" . "𝙏 ")
+   ("filetags" . "󰓹 ")
+   ("auto_tangle" . "󱋿 ")
+   ("subtitle" . "𝙩 ")
+   ("author" . "𝘼 ")
+   ("email" . #(" " 0 1 (display (raise -0.14))))
+   ("date" . "𝘿 ")
+   ("property" . "☸ ")
+   ("options" . "⌥ ")
+   ("startup" . "⏻ ")
+   ("macro" . "𝓜 ")
+   ("bind" . #(" " 0 1 (display (raise -0.1))))
+   ("bibliography" . " ")
+   ("print_bibliography" . #(" " 0 1 (display (raise -0.1))))
+   ("cite_export" . "⮭ ")
+   ("print_glossary" . #("ᴬᶻ " 0 1 (display (raise -0.1))))
+   ("glossary_sources" . #(" " 0 1 (display (raise -0.14))))
+   ("include" . "⇤ ")
+   ("setupfile" . "⇚ ")
+   ("html_head" . "🅷 ")
+   ("html" . "🅗 ")
+   ("latex_class" . "🄻 ")
+   ("latex_class_options" . #("🄻 " 1 2 (display (raise -0.14))))
+   ("latex_header" . "🅻 ")
+   ("latex_header_extra" . "🅻⁺ ")
+   ("latex" . "🅛 ")
+   ("beamer_theme" . "🄱 ")
+   ("beamer_color_theme" . #("🄱 " 1 2 (display (raise -0.12))))
+   ("beamer_font_theme" . "🄱𝐀 ")
+   ("beamer_header" . "🅱 ")
+   ("beamer" . "🅑 ")
+   ("attr_latex" . "🄛 ")
+   ("attr_html" . "🄗 ")
+   ("attr_org" . "⒪ ")
+   ("call" . #(" " 0 1 (display (raise -0.15))))
+   ("name" . "⁍ ")
+   ("header" . "› ")
+   ("caption" . "☰ ")
+   ("results" . "🠶")))
+#+end_src
+*** Org-agenda styling
+Make the time-grid on Org-agenda views look nicer.
+#+begin_src emacs-lisp
+(setq org-agenda-tags-column 0
+      org-agenda-block-separator ?─
+      org-agenda-time-grid
+      '((daily today require-timed)
+        (800 1000 1200 1400 1600 1800 2000)
+        " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+      org-agenda-current-time-string
+      "⭠ now ─────────────────────────────────────────────────")
+#+end_src
+
+Give colour to TODO faces.
+
+#+begin_src emacs-lisp
+(setq org-modern-todo-faces
+ '(("WAIT"
+    :inverse-video t
+    :inherit +org-todo-onhold)
+   ("NEXT"
+    :inverse-video t
+    :foreground "#89b4fa")
+   ("PROG"
+    :inverse-video t
+    :foreground "#a6e3a1")
+   ("TODO"
+    :inverse-video t
+    :foreground "#fab387")))
+#+end_src
+
+*** Always-on Org-modern mode
+Invoke the =global-org-modern-mode= to always enable this mode.
+
+#+begin_src emacs-lisp
+(use-package org-modern
+  :demand t
+  :config
+  (global-org-modern-mode 1))
+#+end_src
