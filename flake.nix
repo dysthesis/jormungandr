@@ -46,10 +46,9 @@
       in
         builtins.concatStringsSep "" asciiBytes;
 
-      emacsBase =
-        if (!pkgs.stdenv.isDarwin) && (builtins.hasAttr "emacs-gtk" pkgs)
-        then pkgs."emacs-gtk"
-        else pkgs.emacs;
+      emacsBase = pkgs.emacs-unstable-pgtk
+        or pkgs.emacs-git.pgtk
+        or pkgs.emacs;
 
       emacsWithDeps = pkgs.emacsWithPackagesFromUsePackage {
         config = configForUsePackage;
@@ -57,25 +56,25 @@
         alwaysEnsure = true;
         extraEmacsPackages = epkgs: let
           orgModernIndent = epkgs.trivialBuild {
-            pname = "org-modern-indent";
-            version = "0.5.1";
-            src = pkgs.fetchFromGitHub {
-              owner = "jdtsmith";
-              repo = "org-modern-indent";
-              rev = "v0.5.1";
-              hash = "sha256-st3338Jk9kZ5BLEPRJZhjqdncMpLoWNwp60ZwKEObyU=";
+              pname = "org-modern-indent";
+              version = "0.5.1";
+              src = pkgs.fetchFromGitHub {
+                owner = "jdtsmith";
+                repo = "org-modern-indent";
+                rev = "v0.5.1";
+                hash = "sha256-st3338Jk9kZ5BLEPRJZhjqdncMpLoWNwp60ZwKEObyU=";
+              };
+              packageRequires = [
+                epkgs.compat
+                epkgs.org
+              ];
+              nativeBuildInputs = [
+                epkgs.compat
+                epkgs.org
+              ];
             };
-            packageRequires = [
-              epkgs.compat
-              epkgs.org
-            ];
-            nativeBuildInputs = [
-              epkgs.compat
-              epkgs.org
-            ];
-          };
 
-          localThemes = pkgs.runCommand "emacs-jormungandr-themes-0.0.0" {} ''
+            localThemes = pkgs.runCommand "emacs-jormungandr-themes-0.0.0" {} ''
             pkgdir="$out/share/emacs/site-lisp/elpa/jormungandr-themes-0.0.0"
             mkdir -p "$pkgdir"
 
@@ -103,12 +102,12 @@
             ;;; jormungandr-themes-autoloads.el ends here
             EOF
           '';
-        in [
-          epkgs.use-package
-          orgModernIndent
-          localThemes
-        ];
-      };
+          in [
+            epkgs.use-package
+            orgModernIndent
+            localThemes
+          ];
+        };
 
       configDir = pkgs.linkFarm "emacs-config" [
         {
