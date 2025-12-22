@@ -1,4 +1,3 @@
-
 #+title: Emacs Configuration
 
 This document defines the entire configuration of Emacs. It is tangled to produce =early-init.el= and =init.el=.

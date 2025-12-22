@@ -74,9 +74,39 @@
               epkgs.org
             ];
           };
+
+          localThemes = pkgs.runCommand "emacs-jormungandr-themes-0.0.0" {} ''
+            pkgdir="$out/share/emacs/site-lisp/elpa/jormungandr-themes-0.0.0"
+            mkdir -p "$pkgdir"
+
+            cp -v ${pkgs.lib.cleanSource ./themes}/*.el "$pkgdir/"
+
+            cat >"$pkgdir/jormungandr-themes-pkg.el" <<'EOF'
+            ;; -*- no-byte-compile: t; lexical-binding: nil -*-
+            (define-package "jormungandr-themes" "0.0.0"
+              "Local Emacs themes packaged with this flake."
+              nil
+              :keywords '("themes"))
+            EOF
+
+            cat >"$pkgdir/jormungandr-themes-autoloads.el" <<'EOF'
+            ;;; jormungandr-themes-autoloads.el --- autoloads  -*- lexical-binding: t; -*-
+            ;;; Code:
+
+            (add-to-list 'load-path (or (and load-file-name (directory-file-name (file-name-directory load-file-name))) (car load-path)))
+
+            (when load-file-name
+              (add-to-list 'custom-theme-load-path
+                           (file-name-as-directory (file-name-directory load-file-name))))
+
+            (provide 'jormungandr-themes-autoloads)
+            ;;; jormungandr-themes-autoloads.el ends here
+            EOF
+          '';
         in [
           epkgs.use-package
           orgModernIndent
+          localThemes
         ];
       };
 

@@ -821,7 +821,7 @@ Respects `diff-hl-disable-on-remote'."
   (if (fboundp 'fringe-mode) (fringe-mode 8))
   (setq-default fringes-outside-margins t)
 
-  ;; STYLE: Sleeker, thinner fringe bitmaps (Doom's `vc-gutter` module).
+  ;; Sleeker, thinner fringe bitmaps (From Doom's `vc-gutter` module).
   (defun dysthesis/vc-gutter-define-thin-bitmaps-a (&rest _)
     (let* ((scale (if (and (boundp 'text-scale-mode-amount)
                            (numberp text-scale-mode-amount))
@@ -869,12 +869,13 @@ Respects `diff-hl-disable-on-remote'."
   (defun dysthesis/vc-gutter--silence-temp-file-prompts-a (fn &rest args)
     (let ((tramp-allow-unsafe-temporary-files t))
       (apply fn args)))
-  (advice-add 'diff-hl-diff-buffer-with-reference :around #'dysthesis/vc-gutter--silence-temp-file-prompts-a)
+  (advice-add 'diff-hl-diff-buffer-with-reference
+              :around #'dysthesis/vc-gutter--silence-temp-file-prompts-a)
 
-  ;; UX: Update diffs when Magit refreshes.
+  ;; Update diffs when Magit refreshes.
   (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
 
-  ;; UX: Better keys in the hunk popup (Evil).
+  ;; Better keys in the hunk popup (Evil).
   (with-eval-after-load 'diff-hl-show-hunk
     (when (bound-and-true-p evil-mode)
       (general-define-key
@@ -893,9 +894,9 @@ Respects `diff-hl-disable-on-remote'."
                           (and (fboundp 'diff-hl-stage-current-hunk)
                                #'diff-hl-stage-current-hunk))))
         (when stage-fn
-           (general-define-key
-            :states '(normal)
-            :keymaps 'diff-hl-show-hunk-map
+          (general-define-key
+           :states '(normal)
+           :keymaps 'diff-hl-show-hunk-map
            "S" stage-fn)))))
 
   ;; UX: Refresh gutter when changing windows or refocusing the frame.
@@ -919,14 +920,14 @@ Respects `diff-hl-disable-on-remote'."
     (add-hook 'window-selection-change-functions #'dysthesis/vc-gutter-update-h t))
   (add-hook 'focus-in-hook #'dysthesis/vc-gutter-update-h t)
 
-  ;; FIX: Keep point stable when reverting hunks.
+  ;; Keep point stable when reverting hunks.
   (defun dysthesis/vc-gutter--save-excursion-a (fn &rest args)
     (let ((pt (point)))
       (prog1 (apply fn args)
         (goto-char pt))))
   (advice-add 'diff-hl-revert-hunk :around #'dysthesis/vc-gutter--save-excursion-a)
 
-  ;; FIX: Shrink the revert window to its contents.
+  ;; Shrink the revert window to its contents.
   (defun dysthesis/vc-gutter--shrink-popup-a (fn &rest args)
     (let* ((refine-mode diff-auto-refine-mode)
            (diff-auto-refine-mode t)
@@ -939,7 +940,7 @@ Respects `diff-hl-disable-on-remote'."
         (apply fn args))))
   (advice-add 'diff-hl-revert-hunk-1 :around #'dysthesis/vc-gutter--shrink-popup-a)
 
-  ;; UX: Update diff-hl immediately upon exiting insert mode.
+  ;; Update diff-hl immediately upon exiting insert mode.
   (defun dysthesis/vc-gutter-init-flydiff-mode-h ()
     (when (bound-and-true-p evil-mode)
       (if diff-hl-flydiff-mode
