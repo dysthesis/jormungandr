@@ -794,6 +794,19 @@ This block is tangled earlier to ensure =general.el= has registered the =:genera
      "TAB" '(comment-line :wk "Comment lines")))
 #+end_src
 
+*** Which-key
+Display keybinding hints in the minibuffer.
+
+#+begin_src emacs-lisp
+  (use-package which-key
+    :ensure t
+    :diminish which-key-mode
+    :custom
+    (which-key-idle-delay 0.3)
+    :config
+    (which-key-mode 1))
+#+end_src
+
 *** Evil
 
 #+begin_src emacs-lisp
