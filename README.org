@@ -1297,6 +1297,7 @@ temporary buffers and tag files.
 #+end_src
 ** Appearance
 *** Ligatures
+Interestingly, although Emacs does not natively support ligatures in code, it is regardless possible to add support for it in via packages.
 #+begin_src emacs-lisp
   (use-package ligature
     :ensure t
@@ -1325,6 +1326,7 @@ temporary buffers and tag files.
     (global-ligature-mode t))
 #+end_src
 *** Dashboard
+Replace the built-in dashboard with a simple, aesthetically pleasing one.
 #+begin_src emacs-lisp
   (use-package dashboard
     :ensure t
@@ -1354,6 +1356,7 @@ temporary buffers and tag files.
   (dashboard-setup-startup-hook))
 #+end_src
 *** Olivetti
+To improve readability, the Olivetti package centres the text in prose buffers, such as Org-mode.
 #+begin_src emacs-lisp
   (use-package olivetti
     :ensure t
@@ -1367,6 +1370,7 @@ temporary buffers and tag files.
 #+end_src
 
 *** Modeline
+Use Doom Emacs' modeline as a more aesthetically pleasing substitute to the built in modeline.
 #+begin_src emacs-lisp
   (use-package doom-modeline
     :ensure t
