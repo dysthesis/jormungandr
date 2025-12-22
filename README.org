@@ -1185,27 +1185,6 @@ trigger autoloads when invoking help commands.
       help-window-select t)
 #+end_src
 
-*** Eglot
-Keep Eglot responsive by avoiding UI blocking during connection establishment,
-and reduce log and progress noise.
-
-**** Connection behaviour
-#+begin_src emacs-lisp
-(setq eglot-sync-connect 0
-      eglot-autoshutdown t
-      eglot-extend-to-xref t)
-#+end_src
-
-**** Logging and progress reporting
-#+begin_src emacs-lisp
-(setq jsonrpc-event-hook nil)
-(when (boundp 'eglot-events-buffer-size)
-  (setq eglot-events-buffer-size 0))
-(setq eglot-events-buffer-config '(:size 0 :format short))
-
-(setq eglot-report-progress nil)
-#+end_src
-
 *** Flymake
 #+begin_src emacs-lisp
 (setq flymake-show-diagnostics-at-end-of-line nil
@@ -1729,6 +1708,189 @@ Install =evil-textobj-tree-sitter= and put all of that together.
     <<config-treesitter-evil-functions>>
     <<config-treesitter-evil-parameters>>
     <<config-treesitter-evil-conditional-and-loop>>)
+#+end_src
+*** Language server integration
+Use Eglot as a lighter-weight, built-in language server client, instead of =lsp-mode=.
+#+begin_src emacs-lisp :noweb yes
+  (use-package eglot
+    :defer t
+    :ensure nil
+    :hook
+    (prog-mode . (lambda ()
+                   <<config-eglot-enable-on-supported-formats>>))
+    (eglot-managed-mode . +lsp-optimization-mode)
+    :custom
+    (eglot-sync-connect 1)
+    (eglot-autoshutdown t)
+    <<config-eglot-auto-help>> 
+    <<config-eglot-connection>>
+    <<config-eglot-loging>>
+    :general
+    <<config-eglot-keybindings>>
+    :config
+    <<config-eglot-server-programs>>
+    <<config-eglot-format-on-save>>)
+#+end_src
+
+**** Keybindings
+#+name: config-eglot-keybindings
+#+begin_src emacs-lisp :tangle no
+  (start/leader-keys
+   "c" '(:ignore t :which-key "Code")
+   "c <escape>" '(keyboard-escape-quit :which-key t)
+   "c r" '(eglot-rename :which-key "Rename")
+   "c a" '(eglot-code-actions :which-key "Actions"))
+#+end_src
+
+**** Server programs
+#+NAME: config-eglot-server-programs
+#+BEGIN_SRC emacs-lisp :tangle no :noweb yes
+  (with-eval-after-load 'eglot
+    (dolist (mode '(<<config-eglot-server-programs-nix>>
+                    <<config-eglot-server-programs-rust>>))
+      (add-to-list 'eglot-server-programs mode)))
+#+END_SRC
+
+
+***** Nix
+#+name: config-eglot-server-programs-nix
+#+begin_src emacs-lisp :noweb yes :tangle no
+  (nix-mode . ("nixd"))
+#+end_src
+
+***** Rust
+#+name: config-eglot-server-programs-rust
+#+begin_src emacs-lisp :noweb yes :tangle no
+  ((rust-ts-mode rust-mode) . ("rust-analyzer"
+                               :initializationOptions
+                               (:check (:command "clippy"))))
+#+end_src
+
+**** Format on save
+#+NAME: config-eglot-format-on-save
+#+BEGIN_SRC emacs-lisp :tangle no
+  (add-hook 'prog-mode-hook
+            (lambda ()
+              (add-hook 'before-save-hook 'eglot-format nil t)))
+#+END_SRC
+**** Exclude LSP integration in some formats
+Some formats do not support language servers, such as Emacs Lisp, Makefile, /etc./ Thus, Eglot should be disabled in those buffers.
+
+#+name:config-eglot-enable-on-supported-formats
+#+begin_src emacs-lisp :noweb yes :tangle no
+  (unless (derived-mode-p 'emacs-lisp-mode
+                          'lisp-mode
+                          'makefile-mode
+                          'snippet-mode)
+    (eglot-ensure))
+#+end_src
+
+**** Disable automatic display of help buffer
+Disable eglot-auto-display-help-buffer because its popup rule causes eglot to steal focus too often.
+#+name: config-eglot-auto-help
+#+begin_src emacs-lisp :tangle no :noweb yes
+  (eglot-auto-display-help-buffer nil)
+#+end_src
+
+**** Performance
+Keep Eglot responsive by avoiding UI blocking during connection establishment, and reduce log and progress noise.
+
+***** Connection behaviour
+#+name: config-eglot-connection
+#+begin_src emacs-lisp :tangle no :noweb yes
+(setq eglot-sync-connect 0
+      eglot-autoshutdown t
+      eglot-extend-to-xref t)
+#+end_src
+
+***** Logging and progress reporting
+#+name: config-eglot-logging
+#+begin_src emacs-lisp :tangle no noweb yes
+(setq jsonrpc-event-hook nil)
+(when (boundp 'eglot-events-buffer-size)
+  (setq eglot-events-buffer-size 0))
+(setq eglot-events-buffer-config '(:size 0 :format short))
+
+(setq eglot-report-progress nil)
+#+end_src
+
+**** Booster
+Improve the performance of Eglot. This requires the installation of [[https://github.com/blahgeek/emacs-lsp-booster][emacs-lsp-booster]] as a binary on your system.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package eglot-booster
+    :ensure t
+    :after eglot
+    :config
+    (eglot-booster-mode))
+#+END_SRC
+
+**** Consult integration
+#+begin_src emacs-lisp
+    (use-package consult-eglot
+      :ensure t
+      :after (eglot consult)
+      :general
+      (start/leader-keys
+    	     "c s" '(consult-eglot-symbols :wk "Code Symbols")))
+#+end_src
+*** Languages
+**** Rust
+=rustic= causes Rust buffers to crash for some reason, so we use =rust-mode= for now. I have yet to encounter a need for the extra features offered by =rustic=.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package rust-mode
+    :ensure t
+    :mode "\\.rs\\'"
+    :custom
+    (rust-format-on-save t)
+    (treesit-language-available-p 'rust)
+    ;; (rust-mode-treesitter-derive t)
+    :hook
+    (rust-mode . eglot-ensure)
+    (rust-mode . eldoc-mode)
+    (rust-mode . (lambda () (setq indent-tabs-mode nil)))
+    ;; prettify symbols
+    (rust-mode . (lambda () (prettify-symbols-mode))))
+    (use-package cargo
+      :ensure t)
+#+END_SRC
+
+**** Nix
+#+BEGIN_SRC emacs-lisp
+  (use-package nix-mode
+    :ensure t
+    :mode "\\.nix\\'"
+    :hook (nix-mode . eglot-ensure))
+#+END_SRC
+
+**** Zig
+#+begin_src emacs-lisp
+  (use-package zig-mode
+    :ensure t
+    :after eglot
+    :custom (zig-format-on-save 1)
+    :hook
+    (zig-mode . eglot-ensure)
+    :config
+    (add-to-list 'eglot-server-programs
+  	       '(zig-mode . ((executable-find "zls")
+   			     :initializationOptions
+  			     (:zig_exe_path (executable-find "zig")))))
+    (if (>= emacs-major-version 28)
+        (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
+      (progn
+        (defun colorize-compilation-buffer ()
+       	(let ((inhibit-read-only t))
+     	  (ansi-color-apply-on-region compilation-filter-start (point))))
+        (add-hook 'compilation-filter-hook 'colorize-compilation-buffer))))
+#+end_src
+*** Direnv
+Load per-project environments with Direnv.
+#+begin_src emacs-lisp
+  (use-package envrc
+    :ensure t
+    :hook (after-init-hook . envrc-global-mode))
 #+end_src
 
 ** Org-mode

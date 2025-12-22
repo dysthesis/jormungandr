@@ -450,17 +450,6 @@
       help-enable-symbol-autoload nil
       help-window-select t)
 
-(setq eglot-sync-connect 0
-      eglot-autoshutdown t
-      eglot-extend-to-xref t)
-
-(setq jsonrpc-event-hook nil)
-(when (boundp 'eglot-events-buffer-size)
-  (setq eglot-events-buffer-size 0))
-(setq eglot-events-buffer-config '(:size 0 :format short))
-
-(setq eglot-report-progress nil)
-
 (setq flymake-show-diagnostics-at-end-of-line nil
       flymake-wrap-around nil)
 
@@ -807,6 +796,99 @@
   (define-key evil-outer-text-objects-map "a"
               (evil-textobj-tree-sitter-get-textobj ("conditional.outer"
                                                      "loop.outer"))))
+
+(use-package eglot
+  :defer t
+  :ensure nil
+  :hook
+  (prog-mode . (lambda ()
+                 (unless (derived-mode-p 'emacs-lisp-mode
+                                         'lisp-mode
+                                         'makefile-mode
+                                         'snippet-mode)
+                   (eglot-ensure))))
+  (eglot-managed-mode . +lsp-optimization-mode)
+  :custom
+  (eglot-sync-connect 1)
+  (eglot-autoshutdown t)
+  (eglot-auto-display-help-buffer nil) 
+  (setq eglot-sync-connect 0
+        eglot-autoshutdown t
+        eglot-extend-to-xref t)
+  
+  :general
+  (start/leader-keys
+   "c" '(:ignore t :which-key "Code")
+   "c <escape>" '(keyboard-escape-quit :which-key t)
+   "c r" '(eglot-rename :which-key "Rename")
+   "c a" '(eglot-code-actions :which-key "Actions"))
+  :config
+  (with-eval-after-load 'eglot
+    (dolist (mode '((nix-mode . ("nixd"))
+                    ((rust-ts-mode rust-mode) . ("rust-analyzer"
+                                                 :initializationOptions
+                                                 (:check (:command "clippy"))))))
+      (add-to-list 'eglot-server-programs mode)))
+  (add-hook 'prog-mode-hook
+            (lambda ()
+              (add-hook 'before-save-hook 'eglot-format nil t))))
+
+(use-package eglot-booster
+  :ensure t
+  :after eglot
+  :config
+  (eglot-booster-mode))
+
+(use-package consult-eglot
+  :ensure t
+  :after (eglot consult)
+  :general
+  (start/leader-keys
+	     "c s" '(consult-eglot-symbols :wk "Code Symbols")))
+
+(use-package rust-mode
+  :ensure t
+  :mode "\\.rs\\'"
+  :custom
+  (rust-format-on-save t)
+  (treesit-language-available-p 'rust)
+  ;; (rust-mode-treesitter-derive t)
+  :hook
+  (rust-mode . eglot-ensure)
+  (rust-mode . eldoc-mode)
+  (rust-mode . (lambda () (setq indent-tabs-mode nil)))
+  ;; prettify symbols
+  (rust-mode . (lambda () (prettify-symbols-mode))))
+  (use-package cargo
+    :ensure t)
+
+(use-package nix-mode
+  :ensure t
+  :mode "\\.nix\\'"
+  :hook (nix-mode . eglot-ensure))
+
+(use-package zig-mode
+  :ensure t
+  :after eglot
+  :custom (zig-format-on-save 1)
+  :hook
+  (zig-mode . eglot-ensure)
+  :config
+  (add-to-list 'eglot-server-programs
+	       '(zig-mode . ((executable-find "zls")
+ 			     :initializationOptions
+			     (:zig_exe_path (executable-find "zig")))))
+  (if (>= emacs-major-version 28)
+      (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
+    (progn
+      (defun colorize-compilation-buffer ()
+     	(let ((inhibit-read-only t))
+   	  (ansi-color-apply-on-region compilation-filter-start (point))))
+      (add-hook 'compilation-filter-hook 'colorize-compilation-buffer))))
+
+(use-package envrc
+  :ensure t
+  :hook (after-init-hook . envrc-global-mode))
 
 (setq org-directory "~/Org/")
 
