@@ -1112,6 +1112,15 @@ Reduce noisy heuristics in mode-specific indentation logic.
     ;; load default config
     (require 'smartparens-config))
 #+end_src
+*** Automatic indenting
+The =aggressive-indent= package constantly enforces that every line is properly indented.
+#+begin_src emacs-lisp
+  (use-package aggressive-indent
+    :ensure t
+    :config
+    (global-aggressive-indent-mode 1)
+    (add-to-list 'aggressive-indent-excluded-modes 'html-mode))
+#+end_src
 ** Built-in packages
 *** Dired and ls-lisp
 Dired defaults favour predictable recursive operations and reduce the number of
