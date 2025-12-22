@@ -798,19 +798,31 @@
   :ensure t
   :demand t
   :custom
+  (diff-hl-global-modes '(not image-mode pdf-view-mode))
   (vc-git-diff-switches '("--histogram"))
-  (diff-hl-flydiff-delay 0.5)
-  (diff-hl-update-async t)
+  (diff-hl-flydiff-delay (if (eq system-type 'darwin) 1.0 0.5))
+  (diff-hl-update-async (or (> emacs-major-version 30) 'thread))
   (diff-hl-show-staged-changes nil)
   (diff-hl-draw-borders nil)
   :hook (vc-dir-mode . turn-on-diff-hl-mode)
   :hook (diff-hl-mode . diff-hl-flydiff-mode)
+  :hook (dired-mode . dysthesis/vc-gutter-enable-maybe-h)
+  :init
+  (defun dysthesis/vc-gutter-enable-maybe-h ()
+    "Conditionally enable `diff-hl-dired-mode' in Dired buffers.
+Respects `diff-hl-disable-on-remote'."
+    (require 'diff-hl-dired nil t)
+    (when (fboundp 'diff-hl-dired-mode)
+      (unless (and (bound-and-true-p diff-hl-disable-on-remote)
+                   (file-remote-p default-directory))
+        (diff-hl-dired-mode 1))))
   :config
-  (if (fboundp 'fringe-mode) (fringe-mode '8))
+  (require 'cl-lib)
+  (if (fboundp 'fringe-mode) (fringe-mode 8))
   (setq-default fringes-outside-margins t)
-  (global-diff-hl-mode)
-  ;; Adapted from https://github.com/jidibinlin/.emacs.d/blob/d5332b2a7877126e83dc3dc0c94e1c66dd5446c0/lisp/init-vc.el
-  (defun dysthesis/pretty-diff-hl-fringe (&rest _)
+
+  ;; STYLE: Sleeker, thinner fringe bitmaps (Doom's `vc-gutter` module).
+  (defun dysthesis/vc-gutter-define-thin-bitmaps-a (&rest _)
     (let* ((scale (if (and (boundp 'text-scale-mode-amount)
                            (numberp text-scale-mode-amount))
                       (expt text-scale-mode-step text-scale-mode-amount)
@@ -820,9 +832,10 @@
                  (if (floatp spacing)
                      (truncate (* (frame-char-height) spacing))
                    spacing)))
+           (bmp-max-width (if (boundp 'diff-hl-bmp-max-width) diff-hl-bmp-max-width 16))
            (w (min (frame-parameter nil (intern (format "%s-fringe" diff-hl-side)))
-                   16))
-           (_ (if (zerop w) (setq w 16))))
+                   bmp-max-width))
+           (_ (if (zerop w) (setq w bmp-max-width))))
 
       (define-fringe-bitmap 'diff-hl-bmp-middle
         (make-vector
@@ -832,21 +845,109 @@
                              2))
         nil nil 'center)))
 
-  (advice-add #'diff-hl-define-bitmaps
-              :after #'dysthesis/pretty-diff-hl-fringe)
+  (advice-add 'diff-hl-define-bitmaps :after #'dysthesis/vc-gutter-define-thin-bitmaps-a)
 
-  (defun dysthesis/diff-hl-type-at-pos-fn (_type _pos)
-    'diff-hl-bmp-middle)
+  (defun dysthesis/vc-gutter-type-at-pos-fn (type _pos)
+    (if (eq type 'delete) 'diff-hl-bmp-delete 'diff-hl-bmp-middle))
 
-  (setq diff-hl-fringe-bmp-function #'dysthesis/diff-hl-type-at-pos-fn)
-  (defun dysthesis/diff-hl-fringe-pretty (_)
-    (set-face-attribute 'diff-hl-insert nil :background 'unspecified :inherit nil)
-    (set-face-attribute 'diff-hl-delete nil :background 'unspecified :inherit nil)
-    (set-face-attribute 'diff-hl-change nil :background 'unspecified :inherit nil))
-  (add-to-list 'after-make-frame-functions
-               #'dysthesis/diff-hl-fringe-pretty)
-  (add-to-list 'enable-theme-functions #'dysthesis/diff-hl-fringe-pretty)
-  (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh))
+  (setq diff-hl-fringe-bmp-function #'dysthesis/vc-gutter-type-at-pos-fn)
+
+  (defun dysthesis/vc-gutter-make-diff-hl-faces-transparent-h (&rest _)
+    (dolist (face '(diff-hl-insert diff-hl-delete diff-hl-change))
+      (set-face-background face nil)))
+  (add-hook 'diff-hl-mode-hook #'dysthesis/vc-gutter-make-diff-hl-faces-transparent-h)
+  (add-hook 'after-make-frame-functions #'dysthesis/vc-gutter-make-diff-hl-faces-transparent-h)
+  (add-hook 'enable-theme-functions #'dysthesis/vc-gutter-make-diff-hl-faces-transparent-h)
+
+  ;; FIX: Let diff-hl keep the left fringe (if Flycheck is used).
+  (with-eval-after-load 'flycheck
+    (setq flycheck-indication-mode 'right-fringe)
+    (define-fringe-bitmap 'flycheck-fringe-bitmap-double-arrow
+      [16 48 112 240 112 48 16] nil nil 'center))
+
+  ;; PERF: Suppress TRAMP's unsafe temp file prompts (Doom's workaround).
+  (defun dysthesis/vc-gutter--silence-temp-file-prompts-a (fn &rest args)
+    (let ((tramp-allow-unsafe-temporary-files t))
+      (apply fn args)))
+  (advice-add 'diff-hl-diff-buffer-with-reference :around #'dysthesis/vc-gutter--silence-temp-file-prompts-a)
+
+  ;; UX: Update diffs when Magit refreshes.
+  (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
+
+  ;; UX: Better keys in the hunk popup (Evil).
+  (with-eval-after-load 'diff-hl-show-hunk
+    (when (bound-and-true-p evil-mode)
+      (general-define-key
+       :states '(normal)
+       :keymaps 'diff-hl-show-hunk-map
+       "p" #'diff-hl-show-hunk-previous
+       "n" #'diff-hl-show-hunk-next
+       "c" #'diff-hl-show-hunk-copy-original-text
+       "r" #'diff-hl-show-hunk-revert-hunk
+       "[" #'diff-hl-show-hunk-previous
+       "]" #'diff-hl-show-hunk-next
+       "{" #'diff-hl-show-hunk-previous
+       "}" #'diff-hl-show-hunk-next)
+      (let ((stage-fn (or (and (fboundp 'diff-hl-show-hunk-stage-hunk)
+                               #'diff-hl-show-hunk-stage-hunk)
+                          (and (fboundp 'diff-hl-stage-current-hunk)
+                               #'diff-hl-stage-current-hunk))))
+        (when stage-fn
+           (general-define-key
+            :states '(normal)
+            :keymaps 'diff-hl-show-hunk-map
+           "S" stage-fn)))))
+
+  ;; UX: Refresh gutter when changing windows or refocusing the frame.
+  (defvar-local dysthesis/vc-gutter--last-state nil)
+  (defun dysthesis/vc-gutter-update-h (&rest _)
+    (when (or (bound-and-true-p diff-hl-mode)
+              (bound-and-true-p diff-hl-dir-mode))
+      (let ((file (buffer-file-name (buffer-base-buffer))))
+        (when file
+          (let* ((props
+                  (when (boundp 'vc-file-prop-obarray)
+                    (copy-sequence
+                     (symbol-plist
+                      (intern (expand-file-name file)
+                              vc-file-prop-obarray)))))
+                 (state (cons (point) props)))
+            (unless (equal dysthesis/vc-gutter--last-state
+                           (setq dysthesis/vc-gutter--last-state state))
+              (ignore (diff-hl-update))))))))
+  (when (boundp 'window-selection-change-functions)
+    (add-hook 'window-selection-change-functions #'dysthesis/vc-gutter-update-h t))
+  (add-hook 'focus-in-hook #'dysthesis/vc-gutter-update-h t)
+
+  ;; FIX: Keep point stable when reverting hunks.
+  (defun dysthesis/vc-gutter--save-excursion-a (fn &rest args)
+    (let ((pt (point)))
+      (prog1 (apply fn args)
+        (goto-char pt))))
+  (advice-add 'diff-hl-revert-hunk :around #'dysthesis/vc-gutter--save-excursion-a)
+
+  ;; FIX: Shrink the revert window to its contents.
+  (defun dysthesis/vc-gutter--shrink-popup-a (fn &rest args)
+    (let* ((refine-mode diff-auto-refine-mode)
+           (diff-auto-refine-mode t)
+           (orig (symbol-function 'diff-refine-hunk)))
+      (cl-letf (((symbol-function 'diff-refine-hunk)
+                 (lambda ()
+                   (when refine-mode
+                     (funcall orig))
+                   (shrink-window-if-larger-than-buffer))))
+        (apply fn args))))
+  (advice-add 'diff-hl-revert-hunk-1 :around #'dysthesis/vc-gutter--shrink-popup-a)
+
+  ;; UX: Update diff-hl immediately upon exiting insert mode.
+  (defun dysthesis/vc-gutter-init-flydiff-mode-h ()
+    (when (bound-and-true-p evil-mode)
+      (if diff-hl-flydiff-mode
+          (add-hook 'evil-insert-state-exit-hook #'diff-hl-flydiff-update)
+        (remove-hook 'evil-insert-state-exit-hook #'diff-hl-flydiff-update))))
+  (add-hook 'diff-hl-flydiff-mode-hook #'dysthesis/vc-gutter-init-flydiff-mode-h)
+
+  (global-diff-hl-mode 1))
 
 (use-package projectile
   :ensure t
