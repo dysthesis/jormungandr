@@ -1015,12 +1015,10 @@ Display Vertico completions in a child frame when in a graphical session.
 
 ** Editing
 *** Text editing, indentation, and formatting
-This section defines defaults for interactive editing. The intent is to favour
-predictable behaviour and keep routine operations responsive.
+This section defines defaults for interactive editing. The intent is to favour predictable behaviour and keep routine operations responsive.
 
 **** Rescaling and deletion feedback
-Avoid automatic frame resizing when adjusting text scale, and keep paired
-deletion feedback brief.
+Avoid automatic frame resizing when adjusting text scale, and keep paired deletion feedback brief.
 
 #+name: config-editing-rescaling-and-deletion
 #+begin_src emacs-lisp :tangle no
@@ -1029,8 +1027,7 @@ deletion feedback brief.
 #+end_src
 
 **** Fringes and indicators
-Define narrow, consistent fringes, and disable fringe indicators for buffer
-boundaries and empty lines.
+Define narrow, consistent fringes, and disable fringe indicators for buffer boundaries and empty lines.
 
 #+name: config-editing-fringes
 #+begin_src emacs-lisp :tangle no
@@ -1041,8 +1038,7 @@ boundaries and empty lines.
 #+end_src
 
 **** Wrapping
-Enable =word-wrap= while truncating long lines by default, as soft wrapping can
-be expensive in large buffers.
+Enable =word-wrap= while truncating long lines by default, as soft wrapping can be expensive in large buffers.
 
 #+name: config-editing-wrapping
 #+begin_src emacs-lisp :tangle no
@@ -1052,8 +1048,7 @@ be expensive in large buffers.
 #+end_src
 
 **** Indentation and completion
-Prefer spaces over tabs, restrict electric indentation to newline and DEL, and
-enable TAB-based indentation and completion.
+Prefer spaces over tabs, restrict electric indentation to newline and DEL, and enable TAB-based indentation and completion.
 
 #+name: config-editing-indentation
 #+begin_src emacs-lisp :tangle no
@@ -1068,9 +1063,7 @@ enable TAB-based indentation and completion.
 #+end_src
 
 **** Commenting and layout
-Keep commenting predictable, use a conventional =fill-column=, avoid
-typewriter-era double spacing at sentence ends, and ensure files end with a
-newline.
+Keep commenting predictable, use a conventional =fill-column=, avoid typewriter-era double spacing at sentence ends, and ensure files end with a newline.
 
 #+name: config-editing-commenting-and-layout
 #+begin_src emacs-lisp :tangle no
@@ -1149,8 +1142,7 @@ The =aggressive-indent= package constantly enforces that every line is properly 
 #+end_src
 ** Built-in packages
 *** Dired and ls-lisp
-Dired defaults favour predictable recursive operations and reduce the number of
-confirmation prompts.
+Dired defaults favour predictable recursive operations and reduce the number of confirmation prompts.
 
 **** Dired defaults
 #+begin_src emacs-lisp
@@ -1166,15 +1158,14 @@ confirmation prompts.
 #+end_src
 
 **** Auto-revert integration
-Use =dired-buffer-stale-p= to determine when a Dired buffer should be refreshed,
-while avoiding automatic reverts for remote directories.
+Use =dired-buffer-stale-p= to determine when a Dired buffer should be refreshed, while avoiding automatic reverts for remote directories.
 
 #+begin_src emacs-lisp
 (setq auto-revert-remote-files nil
       dired-auto-revert-buffer 'dired-buffer-stale-p)
 #+end_src
 
-**** Omit files
+**** Omit pseudo-files
 Keep =dired-omit-mode= quiet and omit the =.= entry.
 
 #+begin_src emacs-lisp
@@ -1199,8 +1190,7 @@ Use a single frame and split windows horizontally.
 #+end_src
 
 *** Help
-Make =apropos= search more extensively, and avoid completion mechanisms that
-trigger autoloads when invoking help commands.
+Make =apropos= search more extensively, and avoid completion mechanisms that trigger autoloads when invoking help commands.
 
 #+begin_src emacs-lisp
 (setq apropos-do-all t)
@@ -1255,8 +1245,7 @@ Do not delay displaying completion candidates.
 #+end_src
 
 *** Ispell
-Avoid errors in Emacs 30 and newer when no dictionary is configured, and save
-the personal dictionary silently.
+Avoid errors in Emacs 30 and newer when no dictionary is configured, and save the personal dictionary silently.
 
 #+begin_src emacs-lisp
 (setq text-mode-ispell-word-completion nil)
@@ -1283,8 +1272,7 @@ Use minibuffer completion for both definitions and cross-reference lists.
 #+end_src
 
 *** Abbrev
-Store =abbrev_defs= under =user-emacs-directory= and save abbreviations
-silently.
+Store =abbrev_defs= under =user-emacs-directory= and save abbreviations silently.
 
 #+begin_src emacs-lisp
 (setq abbrev-file-name (expand-file-name "abbrev_defs" user-emacs-directory))
@@ -1293,8 +1281,7 @@ silently.
 #+end_src
 
 *** Dabbrev
-Configure dynamic abbreviations to be case-aware, and ignore completions from
-temporary buffers and tag files.
+Configure dynamic abbreviations to be case-aware, and ignore completions from temporary buffers and tag files.
 
 #+begin_src emacs-lisp
 (setq dabbrev-upcase-means-case-search t)
