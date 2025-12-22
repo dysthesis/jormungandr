@@ -883,6 +883,15 @@ Reduce noisy heuristics in mode-specific indentation logic.
 (setq sh-indent-after-continuation 'always)
 #+end_src
 
+The =:general= keyword in =use-package= declarations is provided by =general.el=.
+Since this file uses =:general= before our main =general= configuration block,
+we must ensure that =general.el= is loaded early enough to register its keyword
+handlers.
+
+#+begin_src emacs-lisp :noweb yes
+<<config-navigation-general>>
+#+end_src
+
 *** Parentheses and delimiters
 #+begin_src emacs-lisp
   (use-package smartparens
@@ -1076,7 +1085,11 @@ temporary buffers and tag files.
 
 ** Navigation
 *** General
-#+begin_src emacs-lisp
+This block is tangled earlier to ensure =general.el= has registered the
+=:general= keyword before it is first used.
+
+#+name: config-navigation-general
+#+begin_src emacs-lisp :tangle no
   (use-package general
     :demand t
     :config

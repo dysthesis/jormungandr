@@ -208,6 +208,21 @@
 
 (setq sh-indent-after-continuation 'always)
 
+(use-package general
+  :demand t
+  :config
+  (general-create-definer start/leader-keys
+    :keymaps '(normal insert visual emacs)
+    :prefix "SPC"
+    :non-normal-prefix "C-SPC")
+  (general-evil-setup)
+  (general-define-key
+   :states '(normal visual insert emacs)
+   :prefix "SPC"
+   :non-normal-prefix "C-SPC"
+   "." '(find-file :wk "Find file")
+   "TAB" '(comment-line :wk "Comment lines")))
+
 (use-package smartparens
   :ensure smartparens  ;; install the package
   :hook ((prog-mode text-mode markdown-mode) . smartparens-mode) ;; add `smartparens-mode` to these hooks
@@ -306,21 +321,6 @@
                            list-threads erase-buffer scroll-left
                            dired-find-alternate-file set-goal-column))
   (put cmd 'disabled nil))
-
-(use-package general
-  :demand t
-  :config
-  (general-create-definer start/leader-keys
-    :keymaps '(normal insert visual emacs)
-    :prefix "SPC"
-    :non-normal-prefix "C-SPC")
-  (general-evil-setup)
-  (general-define-key
-   :states '(normal visual insert emacs)
-   :prefix "SPC"
-   :non-normal-prefix "C-SPC"
-   "." '(find-file :wk "Find file")
-   "TAB" '(comment-line :wk "Comment lines")))
 
 (use-package meow
 :demand t
