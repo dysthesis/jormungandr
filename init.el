@@ -171,43 +171,6 @@
 (setq-default cursor-in-non-selected-windows nil)
 (setq highlight-nonselected-windows nil)
 
-(setq global-text-scale-adjust-resizes-frames nil)
-(setq delete-pair-blink-delay 0.03)
-
-(setq-default left-fringe-width 8
-              right-fringe-width 8
-              indicate-buffer-boundaries nil
-              indicate-empty-lines nil)
-
-(setq-default word-wrap t
-              truncate-lines t)
-(setq truncate-partial-width-windows nil)
-
-(setq-default electric-indent-chars '(?\n ?\^?)
-              indent-tabs-mode nil
-              tab-width 4)
-
-(setq tab-always-indent 'complete)
-(setq tab-first-completion 'word-or-paren-or-punct)
-
-(setq read-extended-command-predicate #'command-completion-default-include-p)
-
-(setq comment-multi-line t
-      comment-empty-lines t)
-
-(setq-default fill-column 80)
-
-(setq sentence-end-double-space nil)
-(setq require-final-newline t)
-
-(setq lazy-highlight-initial-delay 0)
-
-(setq display-time-default-load-average nil)
-
-(setq python-indent-guess-indent-offset-verbose nil)
-
-(setq sh-indent-after-continuation 'always)
-
 (use-package general
   :demand t
   :config
@@ -223,206 +186,57 @@
    "." '(find-file :wk "Find file")
    "TAB" '(comment-line :wk "Comment lines")))
 
-(use-package smartparens
-  :ensure smartparens  ;; install the package
-  :hook ((prog-mode text-mode markdown-mode) . smartparens-mode) ;; add `smartparens-mode` to these hooks
-  :general
-  ("M-h" 'sp-backward-slurp-sexp)
-  ("M-l" 'sp-forward-slurp-sexp)
-  ("M-H" 'sp-backward-barf-sexp)
-  ("M-L" 'sp-forward-barf-sexp)
-  ("M-r" '(sp-rewrap-sexp :wk "Change wrapping parentheses"))
-  ("C-M-t" 'sp-transpose-sexp)
+(use-package evil 
+  :ensure t
+  :init
+  (setq evil-respect-visual-line-mode t) ;; respect visual lines
+
+  (setq evil-search-module 'isearch) ;; use emacs' built-in search functionality.
+
+  (setq evil-want-C-u-scroll t) ;; allow scroll up with 'C-u'
+  (setq evil-want-C-d-scroll t) ;; allow scroll down with 'C-d'
+
+  (setq evil-want-integration t) ;; necessary for evil collection
+  (setq evil-want-keybinding nil)
+
+  (setq evil-split-window-below t) ;; split windows created below
+  (setq evil-vsplit-window-right t) ;; vertically split windows created to the right
+
+  (setq evil-want-C-i-jump nil) ;; hopefully this will fix weird tab behaviour
+
+  (setq evil-undo-system 'undo-redo) ;; undo via 'u', and redo the undone change via 'C-r'; only available in emacs 28+.
   :config
-  ;; load default config
-  (require 'smartparens-config))
+  (evil-mode 1))
 
-(setq dired-free-space nil
-      dired-dwim-target t
-      dired-deletion-confirmer 'y-or-n-p
-      dired-filter-verbose nil
-      dired-recursive-deletes 'top
-      dired-recursive-copies 'always
-      dired-vc-rename-file t
-      dired-create-destination-dirs 'ask
-      dired-clean-confirm-killing-deleted-buffers nil)
+(global-unset-key (kbd "C-j"))
+(global-set-key (kbd "C-h") #'evil-window-left)
+(global-set-key (kbd "C-j") #'evil-window-down)
+(global-set-key (kbd "C-k") #'evil-window-up)
+(global-set-key (kbd "C-l") #'evil-window-right)
 
-(setq auto-revert-remote-files nil
-      dired-auto-revert-buffer 'dired-buffer-stale-p)
+(use-package evil-collection ;; evilifies a bunch of things
+  :ensure t
+  :after evil
+  :init
+  (setq evil-collection-outline-bind-tab-p t) ;; '<TAB>' cycles visibility in 'outline-minor-mode'
+  ;; If I want to incrementally enable evil-collection mode-by-mode, I can do something like the following:
+  ;; (setq evil-collection-mode-list nil) ;; I don't like surprises
+  ;; (add-to-list 'evil-collection-mode-list 'magit) ;; evilify magit
+  ;; (add-to-list 'evil-collection-mode-list '(pdf pdf-view)) ;; evilify pdf-view
+  :config
+  (evil-collection-init))
 
-(setq dired-omit-verbose nil
-      dired-omit-files (concat "\\`[.]\\'"))
+(use-package evil-commentary
+  :ensure t
+  :after evil
+  :config
+  (evil-commentary-mode)) ;; globally enable evil-commentary
 
-(setq ls-lisp-verbosity nil
-      ls-lisp-dirs-first t)
-
-(setq ediff-window-setup-function 'ediff-setup-windows-plain
-      ediff-split-window-function 'split-window-horizontally)
-
-(setq apropos-do-all t)
-
-(setq help-enable-completion-autoload nil
-      help-enable-autoload nil
-      help-enable-symbol-autoload nil
-      help-window-select t)
-
-(setq eglot-sync-connect 0
-      eglot-autoshutdown t
-      eglot-extend-to-xref t)
-
-(setq jsonrpc-event-hook nil)
-(when (boundp 'eglot-events-buffer-size)
-  (setq eglot-events-buffer-size 0))
-(setq eglot-events-buffer-config '(:size 0 :format short))
-
-(setq eglot-report-progress nil)
-
-(setq flymake-show-diagnostics-at-end-of-line nil
-      flymake-wrap-around nil)
-
-(setq hl-line-sticky-flag nil
-      global-hl-line-sticky-flag nil)
-
-(setq icomplete-compute-delay 0.01)
-
-(setq flyspell-issue-welcome-flag nil
-      flyspell-issue-message-flag nil)
-
-(setq text-mode-ispell-word-completion nil)
-
-(setq ispell-silently-savep t)
-
-(setq ibuffer-formats
-      '((mark modified read-only locked
-              " " (name 55 55 :left :elide)
-              " " (size 8 -1 :right)
-              " " (mode 18 18 :left :elide) " " filename-and-process)
-        (mark " " (name 16 -1) " " filename)))
-
-(setq xref-show-definitions-function 'xref-show-definitions-completing-read
-      xref-show-xrefs-function 'xref-show-definitions-completing-read)
-
-(setq abbrev-file-name (expand-file-name "abbrev_defs" user-emacs-directory))
-
-(setq save-abbrevs 'silently)
-
-(setq dabbrev-upcase-means-case-search t)
-
-(setq dabbrev-ignored-buffer-modes
-      '(archive-mode image-mode docview-mode tags-table-mode
-                     pdf-view-mode tags-table-mode))
-
-(setq dabbrev-ignored-buffer-regexps
-      '("\\` "
-        "\\(?:\\(?:[EG]?\\|GR\\)TAGS\\|e?tags\\|GPATH\\)\\(<[0-9]+>\\)?"))
-
-(dolist (cmd '(list-timers narrow-to-region narrow-to-page
-                           upcase-region downcase-region
-                           list-threads erase-buffer scroll-left
-                           dired-find-alternate-file set-goal-column))
-  (put cmd 'disabled nil))
-
-(use-package meow
-:demand t
-;:bind (("C-w s" . split-window-below)
-;       ("C-w v" . split-window-right)
-;       ("C-w c" . delete-window))
-:config
-(setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty
-      meow-use-clipboard t)
-
-(meow-motion-overwrite-define-key
- '("j" . meow-next)
- '("k" . meow-prev)
- '("<escape>" . ignore))
-
-(meow-leader-define-key
- ;; SPC j/k will run the original command in MOTION state.
- '("j" . "H-j")
- '("k" . "H-k")
-
- ;; Use SPC (0-9) for digit arguments.
- '("1" . meow-digit-argument)
- '("2" . meow-digit-argument)
- '("3" . meow-digit-argument)
- '("4" . meow-digit-argument)
- '("5" . meow-digit-argument)
- '("6" . meow-digit-argument)
- '("7" . meow-digit-argument)
- '("8" . meow-digit-argument)
- '("9" . meow-digit-argument)
- '("0" . meow-digit-argument)
- '("/" . meow-keypad-describe-key)
- '("?" . meow-cheatsheet))
-
-(meow-normal-define-key
- '("0" . meow-expand-0)
- '("9" . meow-expand-9)
- '("8" . meow-expand-8)
- '("7" . meow-expand-7)
- '("6" . meow-expand-6)
- '("5" . meow-expand-5)
- '("4" . meow-expand-4)
- '("3" . meow-expand-3)
- '("2" . meow-expand-2)
- '("1" . meow-expand-1)
- '("-" . negative-argument)
- '(";" . meow-reverse)
- '("," . meow-inner-of-thing)
- '("." . meow-bounds-of-thing)
- '("[" . meow-beginning-of-thing)
- '("]" . meow-end-of-thing)
- '("a" . meow-append)
- '("A" . meow-open-below)
- '("b" . meow-back-word)
- '("B" . meow-back-symbol)
- '("c" . meow-change)
- '("d" . meow-delete)
- '("D" . meow-backward-delete)
- '("e" . meow-next-word)
- '("E" . meow-next-symbol)
- '("f" . meow-find)
- '("g" . meow-cancel-selection)
- '("G" . meow-grab)
- '("h" . meow-left)
- '("H" . meow-left-expand)
- '("i" . meow-insert)
- '("I" . meow-open-above)
- '("j" . meow-next)
- '("J" . meow-next-expand)
- '("k" . meow-prev)
- '("K" . meow-prev-expand)
- '("l" . meow-right)
- '("L" . meow-right-expand)
- '("m" . meow-join)
- '("n" . meow-search)
- '("o" . meow-block)
- '("O" . meow-to-block)
- '("p" . meow-yank)
- '("q" . meow-quit)
- '("Q" . meow-goto-line)
- '("r" . meow-replace)
- '("R" . meow-swap-grab)
- '("s" . meow-kill)
- '("t" . meow-till)
- '("u" . meow-undo)
- '("U" . meow-undo-in-selection)
- '("v" . meow-visit)
- '("w" . meow-mark-word)
- '("W" . meow-mark-symbol)
- '("x" . meow-line)
- '("X" . meow-goto-line)
- '("y" . meow-save)
- '("Y" . meow-sync-grab)
- '("z" . meow-pop-selection)
- '("'" . repeat)
- '("<escape>" . ignore))
-
-;; Add support for arrows as a surround pair
-(meow-thing-register 'arrow '(pair ("<") (">")) '(pair ("<") (">")))
-(add-to-list 'meow-char-thing-table '(?a . arrow))
-;; Meow!
-(meow-global-mode 1))
+(use-package evil-surround
+  :ensure t
+  :after evil
+  :config
+  (global-evil-surround-mode 1)) ;; globally enable evil-surround
 
 (use-package avy
   :ensure t
@@ -550,6 +364,142 @@
   ;; (setq consult-project-function nil)
   )
 
+(setq global-text-scale-adjust-resizes-frames nil)
+(setq delete-pair-blink-delay 0.03)
+
+(setq-default left-fringe-width 8
+              right-fringe-width 8
+              indicate-buffer-boundaries nil
+              indicate-empty-lines nil)
+
+(setq-default word-wrap t
+              truncate-lines t)
+(setq truncate-partial-width-windows nil)
+
+(setq-default electric-indent-chars '(?\n ?\^?)
+              indent-tabs-mode nil
+              tab-width 4)
+
+(setq tab-always-indent 'complete)
+(setq tab-first-completion 'word-or-paren-or-punct)
+
+(setq read-extended-command-predicate #'command-completion-default-include-p)
+
+(setq comment-multi-line t
+      comment-empty-lines t)
+
+(setq-default fill-column 80)
+
+(setq sentence-end-double-space nil)
+(setq require-final-newline t)
+
+(setq lazy-highlight-initial-delay 0)
+
+(setq display-time-default-load-average nil)
+
+(setq python-indent-guess-indent-offset-verbose nil)
+
+(setq sh-indent-after-continuation 'always)
+
+(use-package smartparens
+  :ensure smartparens  ;; install the package
+  :hook ((prog-mode text-mode markdown-mode) . smartparens-mode) ;; add `smartparens-mode` to these hooks
+  :general
+  ("M-h" 'sp-backward-slurp-sexp)
+  ("M-l" 'sp-forward-slurp-sexp)
+  ("M-H" 'sp-backward-barf-sexp)
+  ("M-L" 'sp-forward-barf-sexp)
+  ("M-r" '(sp-rewrap-sexp :wk "Change wrapping parentheses"))
+  ("C-M-t" 'sp-transpose-sexp)
+  :config
+  ;; load default config
+  (require 'smartparens-config))
+
+(setq dired-free-space nil
+      dired-dwim-target t
+      dired-deletion-confirmer 'y-or-n-p
+      dired-filter-verbose nil
+      dired-recursive-deletes 'top
+      dired-recursive-copies 'always
+      dired-vc-rename-file t
+      dired-create-destination-dirs 'ask
+      dired-clean-confirm-killing-deleted-buffers nil)
+
+(setq auto-revert-remote-files nil
+      dired-auto-revert-buffer 'dired-buffer-stale-p)
+
+(setq dired-omit-verbose nil
+      dired-omit-files (concat "\\`[.]\\'"))
+
+(setq ls-lisp-verbosity nil
+      ls-lisp-dirs-first t)
+
+(setq ediff-window-setup-function 'ediff-setup-windows-plain
+      ediff-split-window-function 'split-window-horizontally)
+
+(setq apropos-do-all t)
+
+(setq help-enable-completion-autoload nil
+      help-enable-autoload nil
+      help-enable-symbol-autoload nil
+      help-window-select t)
+
+(setq eglot-sync-connect 0
+      eglot-autoshutdown t
+      eglot-extend-to-xref t)
+
+(setq jsonrpc-event-hook nil)
+(when (boundp 'eglot-events-buffer-size)
+  (setq eglot-events-buffer-size 0))
+(setq eglot-events-buffer-config '(:size 0 :format short))
+
+(setq eglot-report-progress nil)
+
+(setq flymake-show-diagnostics-at-end-of-line nil
+      flymake-wrap-around nil)
+
+(setq hl-line-sticky-flag nil
+      global-hl-line-sticky-flag nil)
+
+(setq icomplete-compute-delay 0.01)
+
+(setq flyspell-issue-welcome-flag nil
+      flyspell-issue-message-flag nil)
+
+(setq text-mode-ispell-word-completion nil)
+
+(setq ispell-silently-savep t)
+
+(setq ibuffer-formats
+      '((mark modified read-only locked
+              " " (name 55 55 :left :elide)
+              " " (size 8 -1 :right)
+              " " (mode 18 18 :left :elide) " " filename-and-process)
+        (mark " " (name 16 -1) " " filename)))
+
+(setq xref-show-definitions-function 'xref-show-definitions-completing-read
+      xref-show-xrefs-function 'xref-show-definitions-completing-read)
+
+(setq abbrev-file-name (expand-file-name "abbrev_defs" user-emacs-directory))
+
+(setq save-abbrevs 'silently)
+
+(setq dabbrev-upcase-means-case-search t)
+
+(setq dabbrev-ignored-buffer-modes
+      '(archive-mode image-mode docview-mode tags-table-mode
+                     pdf-view-mode tags-table-mode))
+
+(setq dabbrev-ignored-buffer-regexps
+      '("\\` "
+        "\\(?:\\(?:[EG]?\\|GR\\)TAGS\\|e?tags\\|GPATH\\)\\(<[0-9]+>\\)?"))
+
+(dolist (cmd '(list-timers narrow-to-region narrow-to-page
+                           upcase-region downcase-region
+                           list-threads erase-buffer scroll-left
+                           dired-find-alternate-file set-goal-column))
+  (put cmd 'disabled nil))
+
 (use-package ligature
   :ensure t
   :config
@@ -617,7 +567,7 @@
   :ensure t
   :init (doom-modeline-mode 1)
   :custom
-  (doom-modeline-height 30)
+  (doom-modeline-height 25)
   (doom-modeline-bar-width 4)
   (doom-modeline-persp-name t)
   (doom-modeline-persp-icon t))
@@ -807,6 +757,7 @@
 
 (use-package transient
   :ensure t)
+
 (use-package magit
   :ensure t
   :after (transient)
@@ -815,7 +766,7 @@
    :states '(normal visual insert emacs)
    :prefix "SPC"
    :non-normal-prefix "C-SPC"
-   "g g" '(magit :wk "Magit")))
+   "gg" '(magit :wk "Magit")))
 
 (setq org-directory "~/Org/")
 
