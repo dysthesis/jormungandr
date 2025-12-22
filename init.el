@@ -175,12 +175,12 @@
   :demand t
   :config
   (general-create-definer start/leader-keys
-    :keymaps '(normal insert visual emacs)
+    :states '(normal visual emacs)
     :prefix "SPC"
     :non-normal-prefix "C-SPC")
   (general-evil-setup)
   (general-define-key
-   :states '(normal visual insert emacs)
+   :states '(normal visual emacs)
    :prefix "SPC"
    :non-normal-prefix "C-SPC"
    "." '(find-file :wk "Find file")
@@ -326,7 +326,7 @@
   :hook (completion-list-mode . consult-preview-at-point-mode)
   :init
   (general-define-key
-   :states '(normal visual insert emacs)
+   :states '(normal visual emacs)
    :prefix "SPC"
    :non-normal-prefix "C-SPC"
    "f f" '(consult-fd :wk "Fd")
@@ -789,7 +789,7 @@
   :after (transient)
   :config
   (general-define-key
-   :states '(normal visual insert emacs)
+   :states '(normal visual emacs)
    :prefix "SPC"
    :non-normal-prefix "C-SPC"
    "gg" '(magit :wk "Magit")))
@@ -955,7 +955,7 @@ Respects `diff-hl-disable-on-remote'."
   :diminish projectile-mode
   :config
   (general-define-key
-   :states '(normal visual insert emacs)
+   :states '(normal visual emacs)
    :prefix "SPC"
    :non-normal-prefix "C-SPC"
    "p" '(projectile-command-map :wk "+ Projectile"))
@@ -1163,7 +1163,7 @@ Respects `diff-hl-disable-on-remote'."
   (setq anaconda-mode-eldoc-as-single-line t)
   :config
   (general-define-key
-   :states '(normal visual insert emacs)
+   :states '(normal visual emacs)
    :prefix "SPC"
    :non-normal-prefix "C-SPC"
    "g d" 'anaconda-mode-find-definitions

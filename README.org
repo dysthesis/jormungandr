@@ -781,12 +781,12 @@ This block is tangled earlier to ensure =general.el= has registered the =:genera
     :demand t
     :config
     (general-create-definer start/leader-keys
-      :keymaps '(normal insert visual emacs)
+      :states '(normal visual emacs)
       :prefix "SPC"
       :non-normal-prefix "C-SPC")
     (general-evil-setup)
     (general-define-key
-     :states '(normal visual insert emacs)
+     :states '(normal visual emacs)
      :prefix "SPC"
      :non-normal-prefix "C-SPC"
      "." '(find-file :wk "Find file")
@@ -958,7 +958,7 @@ Display Vertico completions in a child frame when in a graphical session.
     :hook (completion-list-mode . consult-preview-at-point-mode)
     :init
     (general-define-key
-     :states '(normal visual insert emacs)
+     :states '(normal visual emacs)
      :prefix "SPC"
      :non-normal-prefix "C-SPC"
      "f f" '(consult-fd :wk "Fd")
@@ -1634,7 +1634,7 @@ Define some keybindings to associate with Magit.
 #+name:config-magit-keybinding
 #+begin_src emacs-lisp :tangle no :noweb yes
   (general-define-key
-   :states '(normal visual insert emacs)
+   :states '(normal visual emacs)
    :prefix "SPC"
    :non-normal-prefix "C-SPC"
    "gg" '(magit :wk "Magit"))
@@ -1829,7 +1829,7 @@ We also need to define some keybindings to associate with Projectile. Projectile
 #+name: config-projectile-keybindings
 #+begin_src emacs-lisp :tangle no :noweb yes
   (general-define-key
-   :states '(normal visual insert emacs)
+   :states '(normal visual emacs)
    :prefix "SPC"
    :non-normal-prefix "C-SPC"
    "p" '(projectile-command-map :wk "+ Projectile"))
@@ -2182,7 +2182,7 @@ Use =dape= because =dap-mode= is bound to =lsp-mode=.
     (setq anaconda-mode-eldoc-as-single-line t)
     :config
     (general-define-key
-     :states '(normal visual insert emacs)
+     :states '(normal visual emacs)
      :prefix "SPC"
      :non-normal-prefix "C-SPC"
      "g d" 'anaconda-mode-find-definitions
