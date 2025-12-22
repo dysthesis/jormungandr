@@ -1629,6 +1629,104 @@ Define some keybindings to associate with Magit.
    "gg" '(magit :wk "Magit"))
 #+end_src
 
+** Project management
+The Projectile package provides nice abstractions to treat directories as projects. It provides functionalities such as finding files or grepping in a project.
+
+First, we inform Projectile where to find projects.
+#+name:config-projectile-directories
+#+begin_src emacs-lisp :tangle no :noweb yes
+  (setq projectile-project-search-path '("~/Documents/Projects"
+                                         "~/Documents/University"))
+#+end_src
+
+Then, install Projectile.
+#+begin_src emacs-lisp :noweb yes
+  (use-package projectile
+    :ensure t
+    :diminish projectile-mode
+    :config
+    <<config-projectile-keybindings>>
+    (projectile-mode)
+    :init
+    <<config-projectile-directories>>
+    (setq projectile-switch-project-action #'projectile-dired))
+#+end_src
+
+*** Keybindings
+We also need to define some keybindings to associate with Projectile. Projectile itself comes with default keybindings; we attach them to =SPC-p= as a prefix key.
+#+name: config-projectile-keybindings
+#+begin_src emacs-lisp :tangle no :noweb yes
+  (general-define-key
+   :states '(normal visual insert emacs)
+   :prefix "SPC"
+   :non-normal-prefix "C-SPC"
+   "p" '(projectile-command-map :wk "+ Projectile"))
+#+end_src
+
+** Code editing
+*** Tree-sitter
+Tree-sitter is a library which informs editors (and other programs) about the syntax of code. It is primarily known to provide a more accurate syntax highlighting compared to traditional, regular expression based techniques, but it can also be integrated with Evil to provide syntax-aware text objects.
+
+First, we install tree-sitter itself.
+#+begin_src emacs-lisp :noweb yes :tangle no
+  (use-package tree-sitter
+    :ensure t
+    :hook
+    <<config-treesitter-progmode-hook>>)
+#+end_src
+
+Enable the use of tree-sitter on every programming-related buffers.
+#+name: config-treesitter-progmode-hook
+#+begin_src emacs-lisp :noweb yes :tangle no
+  (prog-mode . global-tree-sitter-mode)
+#+end_src
+
+We also need to install support for various languages.
+#+begin_src emacs-lisp
+  (use-package tree-sitter-langs
+    :ensure t)
+#+end_src
+
+**** Text objects
+Define text objects for Evil mode based on syntax elements from tree-sitter.
+
+We can associate the text object =f= with functions.
+#+NAME: config-treesitter-evil-functions
+#+BEGIN_SRC emacs-lisp :tangle no :noweb yes
+  (define-key evil-outer-text-objects-map "f"
+              (evil-textobj-tree-sitter-get-textobj ("function.outer")))
+  (define-key evil-inner-text-objects-map "f"
+              (evil-textobj-tree-sitter-get-textobj("function.inner")))
+#+END_SRC
+
+Likewise, associate =i= with parameters.
+#+name: config-treesitter-evil-parameters
+#+begin_src emacs-lisp :tangle no :noweb yes
+  (define-key evil-inner-text-objects-map "i"
+              (evil-textobj-tree-sitter-get-textobj ("parameter.inner")))
+  (define-key evil-outer-text-objects-map "i"
+              (evil-textobj-tree-sitter-get-textobj ("parameter.outer")))
+#+end_src
+
+Lastly, we can associate a single text object, =a=, with both a conditional statement or a loop.
+#+NAME: config-treesitter-evil-conditional-and-loop
+#+begin_src emacs-lisp :tangle no :noweb yes
+  (define-key evil-outer-text-objects-map "a"
+              (evil-textobj-tree-sitter-get-textobj ("conditional.outer"
+                                                     "loop.outer")))
+#+end_src
+
+Install =evil-textobj-tree-sitter= and put all of that together.
+#+begin_src emacs-lisp :noweb yes
+  (use-package evil-textobj-tree-sitter
+    :ensure t
+    :after (evil tree-sitter)
+    :config
+    <<config-treesitter-evil-functions>>
+    <<config-treesitter-evil-parameters>>
+    <<config-treesitter-evil-conditional-and-loop>>)
+#+end_src
+
 ** Org-mode
 
 Tell Emacs where our Org-mode documents are stored.
