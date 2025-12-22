@@ -208,6 +208,20 @@
 
 (setq sh-indent-after-continuation 'always)
 
+(use-package smartparens
+  :ensure smartparens  ;; install the package
+  :hook ((prog-mode text-mode markdown-mode) . smartparens-mode) ;; add `smartparens-mode` to these hooks
+  :general
+  ("M-h" 'sp-backward-slurp-sexp)
+  ("M-l" 'sp-forward-slurp-sexp)
+  ("M-H" 'sp-backward-barf-sexp)
+  ("M-L" 'sp-forward-barf-sexp)
+  ("M-r" '(sp-rewrap-sexp :wk "Change wrapping parentheses"))
+  ("C-M-t" 'sp-transpose-sexp)
+  :config
+  ;; load default config
+  (require 'smartparens-config))
+
 (setq dired-free-space nil
       dired-dwim-target t
       dired-deletion-confirmer 'y-or-n-p
@@ -536,6 +550,32 @@
   ;; (setq consult-project-function nil)
   )
 
+(use-package ligature
+  :ensure t
+  :config
+  ;; Enable the "www" ligature in every possible major mode
+  (ligature-set-ligatures 't '("www"))
+  ;; Enable traditional ligature support in eww-mode, if the
+  ;; `variable-pitch' face supports it
+  (ligature-set-ligatures 'eww-mode '("ff" "fi" "ffi"))
+  ;; Enable all Cascadia Code ligatures in programming modes
+  (ligature-set-ligatures 'prog-mode '("|||>" "<|||" "<==>" "<!--" "####" "~~>" "***" "||=" "||>"
+                                       ":::" "::=" "=:=" "===" "==>" "=!=" "=>>" "=<<" "=/=" "!=="
+                                       "!!." ">=>" ">>=" ">>>" ">>-" ">->" "->>" "-->" "---" "-<<"
+                                       "<~~" "<~>" "<*>" "<||" "<|>" "<$>" "<==" "<=>" "<=<" "<->"
+                                       "<--" "<-<" "<<=" "<<-" "<<<" "<+>" "</>" "###" "#_(" "..<"
+                                       "..." "+++" "/==" "///" "_|_" "www" "&&" "^=" "~~" "~@" "~="
+                                       "~>" "~-" "**" "*>" "*/" "||" "|}" "|]" "|=" "|>" "|-" "{|"
+                                       "[|" "]#" "::" ":=" ":>" ":<" "$>" "==" "=>" "!=" "!!" ">:"
+                                       ">=" ">>" ">-" "-~" "-|" "->" "--" "-<" "<~" "<*" "<|" "<:"
+                                       "<$" "<=" "<>" "<-" "<<" "<+" "</" "#{" "#[" "#:" "#=" "#!"
+                                       "##" "#(" "#?" "#_" "%%" ".=" ".-" ".." ".?" "+>" "++" "?:"
+                                       "?=" "?." "??" ";;" "/*" "/=" "/>" "//" "__" "~~" "(*" "*)"
+                                       "\\\\" "://"))
+  ;; Enables ligature checks globally in all buffers.  You can also do it
+  ;; per mode with `ligature-mode'.
+  (global-ligature-mode t))
+
 (use-package dashboard
   :ensure t
   :custom
@@ -582,13 +622,23 @@
   (doom-modeline-persp-name t)
   (doom-modeline-persp-icon t))
 
-(set-face-attribute 'default nil :font "JBMono Nerd Font" :height 90)
-(set-fontset-font t nil (font-spec :size 10 :name "JBMono Nerd Font"))
-(setq-default line-spacing 0.2)
-(custom-theme-set-faces
- 'user
- '(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height 90))))
- '(fixed-pitch ((t ( :family "JBMono Nerd Font" :height 90)))))
+(defun dysthesis/configure-font (&optional frame)
+  "Configure font given initial non-daemon FRAME. Intended for `after-make-frame-functions'."
+  (let ((my-font-height (if (string= (system-name) "deimos") 90 70))
+	(my-font-size   (if (string= (system-name) "deimos") 9 7)))
+    (set-face-attribute 'default nil :font "JBMono Nerd Font" :height my-font-height)
+    (set-fontset-font t nil (font-spec :size my-font-size :name "JBMono Nerd Font"))
+    (setq-default line-spacing 0.2)
+    (custom-theme-set-faces
+     'user
+     `(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height ,my-font-height))))
+     `(fixed-pitch ((t (:family "JBMono Nerd Font" :height ,my-font-height))))))
+  (add-to-list 'face-font-rescale-alist '("Atkinson Hyperlegible Next" . 1.16)) 
+  (remove-hook 'after-make-frame-functions #'dysthesis/configure-font))
+
+(add-hook 'after-make-frame-functions #'dysthesis/configure-font)
+(unless (daemonp)
+  (dysthesis/configure-font (selected-frame)))
 
 (use-package doom-themes
   :ensure t
@@ -597,7 +647,7 @@
   (doom-themes-enable-bold t)   ; if nil, bold is universally disabled
   (doom-themes-enable-italic t) ; if nil, italics is universally disabled
   :config
-  (load-theme 'doom-one t)
+  (load-theme 'doom-nord t)
 
   ;; Enable flashing mode-line on errors
   (doom-themes-visual-bell-config)
@@ -755,6 +805,18 @@
   :ensure t
   :after tempel)
 
+(use-package transient
+  :ensure t)
+(use-package magit
+  :ensure t
+  :after (transient)
+  :config
+  (general-define-key
+   :states '(normal visual insert emacs)
+   :prefix "SPC"
+   :non-normal-prefix "C-SPC"
+   "g g" '(magit :wk "Magit")))
+
 (setq org-directory "~/Org/")
 
 (setq org-ellipsis " ↪")
@@ -762,6 +824,18 @@
 (setq org-pretty-entities t)
 
 (setq org-startup-folded t)
+
+(custom-theme-set-faces
+ 'user
+ '(org-level-1 ((t (:inherit default :height 1.5  :weight bold))))
+ '(org-level-2 ((t (:inherit default :height 1.4  :weight bold))))
+ '(org-level-3 ((t (:inherit default :height 1.3  :weight bold))))
+ '(org-level-4 ((t (:inherit default :height 1.25 :weight semi-bold))))
+ '(org-level-5 ((t (:inherit default :height 1.2  :weight normal))))
+ '(org-level-6 ((t (:inherit default :height 1.15 :weight normal))))
+ '(org-level-7 ((t (:inherit default :height 1.1  :weight normal))))
+ '(org-level-8 ((t (:inherit default :height 1.05 :weight normal))))
+ '(org-document-title ((t (:height 2.0 :weight heavy)))))
 
 (package-initialize)
 (menu-bar-mode -1)
@@ -775,6 +849,8 @@
 (set-face-background 'fringe (face-attribute 'default :background))
 
 (setq org-hide-emphasis-markers t)
+
+(setq org-modern-star 'replace)
 
 (setq  org-modern-list
        '((42 . "•")
