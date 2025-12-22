@@ -828,7 +828,7 @@ Display keybinding hints in the minibuffer.
 
     (setq evil-want-C-i-jump nil) ;; hopefully this will fix weird tab behaviour
 
-    (setq evil-undo-system 'undo-redo) ;; undo via 'u', and redo the undone change via 'C-r'; only available in emacs 28+.
+    (setq evil-undo-system 'undo-fu) ;; use undo-fu for a more predictable undo tree
     :config
     (evil-mode 1))
 
@@ -910,6 +910,19 @@ Display keybinding hints in the minibuffer.
 
   (savehist-mode) ;; Enables save history mode
 #+end_src
+
+**** Posframe
+Display Vertico completions in a child frame when in a graphical session.
+
+#+begin_src emacs-lisp
+  (use-package vertico-posframe
+    :ensure t
+    :after vertico
+    :config
+    (when (display-graphic-p)
+      (vertico-posframe-mode 1)))
+#+end_src
+
 *** Marginalia
 #+begin_src emacs-lisp
   (use-package marginalia
@@ -1200,8 +1213,24 @@ trigger autoloads when invoking help commands.
 
 *** Flymake
 #+begin_src emacs-lisp
-(setq flymake-show-diagnostics-at-end-of-line nil
-      flymake-wrap-around nil)
+  (use-package flymake
+    :ensure nil
+    :after (consult eglot)
+    :general
+    (start/leader-keys
+     :keymaps 'flymake-mode-map
+     "el" '(consult-flymake :wk "List errors"))
+    :hook
+    (prog-mode . flymake-mode)
+    (flymake-mode . (lambda () (or (ignore-errors flymake-show-project-diagnostics)
+                                   (flymake-show-buffer-diagnostics))))
+    :custom
+    (flymake-no-changes-timeout nil)
+    (flymake-show-diagnostics-at-end-of-line nil)
+    (flymake-wrap-around nil)
+    :general
+    (general-nmap "en" 'flymake-goto-next-error)
+    (general-nmap "ep" 'flymake-goto-prev-error))
 #+end_src
 
 *** hl-line
@@ -1625,6 +1654,65 @@ Define some keybindings to associate with Magit.
    "gg" '(magit :wk "Magit"))
 #+end_src
 
+**** Git gutter
+Display a diff of the current file against =HEAD= in the fringe.
+
+#+begin_src emacs-lisp
+  (use-package diff-hl
+    :ensure t
+    :demand t
+    :custom
+    (vc-git-diff-switches '("--histogram"))
+    (diff-hl-flydiff-delay 0.5)
+    (diff-hl-update-async t)
+    (diff-hl-show-staged-changes nil)
+    (diff-hl-draw-borders nil)
+    :hook (vc-dir-mode . turn-on-diff-hl-mode)
+    :hook (diff-hl-mode . diff-hl-flydiff-mode)
+    :config
+    (if (fboundp 'fringe-mode) (fringe-mode '8))
+    (setq-default fringes-outside-margins t)
+    (global-diff-hl-mode)
+    ;; Adapted from https://github.com/jidibinlin/.emacs.d/blob/d5332b2a7877126e83dc3dc0c94e1c66dd5446c0/lisp/init-vc.el
+    (defun dysthesis/pretty-diff-hl-fringe (&rest _)
+      (let* ((scale (if (and (boundp 'text-scale-mode-amount)
+                             (numberp text-scale-mode-amount))
+                        (expt text-scale-mode-step text-scale-mode-amount)
+                      1))
+             (spacing (or (and (display-graphic-p) (default-value 'line-spacing)) 0))
+             (h (+ (ceiling (* (frame-char-height) scale))
+                   (if (floatp spacing)
+                       (truncate (* (frame-char-height) spacing))
+                     spacing)))
+             (w (min (frame-parameter nil (intern (format "%s-fringe" diff-hl-side)))
+                     16))
+             (_ (if (zerop w) (setq w 16))))
+
+        (define-fringe-bitmap 'diff-hl-bmp-middle
+          (make-vector
+           h (string-to-number (let ((half-w (1- (/ w 2))))
+                                 (concat (make-string half-w ?1)
+                                         (make-string (- w half-w) ?0)))
+                               2))
+          nil nil 'center)))
+
+    (advice-add #'diff-hl-define-bitmaps
+                :after #'dysthesis/pretty-diff-hl-fringe)
+
+    (defun dysthesis/diff-hl-type-at-pos-fn (_type _pos)
+      'diff-hl-bmp-middle)
+
+    (setq diff-hl-fringe-bmp-function #'dysthesis/diff-hl-type-at-pos-fn)
+    (defun dysthesis/diff-hl-fringe-pretty (_)
+      (set-face-attribute 'diff-hl-insert nil :background 'unspecified :inherit nil)
+      (set-face-attribute 'diff-hl-delete nil :background 'unspecified :inherit nil)
+      (set-face-attribute 'diff-hl-change nil :background 'unspecified :inherit nil))
+    (add-to-list 'after-make-frame-functions
+                 #'dysthesis/diff-hl-fringe-pretty)
+    (add-to-list 'enable-theme-functions #'dysthesis/diff-hl-fringe-pretty)
+    (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh))
+#+end_src
+
 ** Project management
 The Projectile package provides nice abstractions to treat directories as projects. It provides functionalities such as finding files or grepping in a project.
 
@@ -1724,6 +1812,36 @@ Install =evil-textobj-tree-sitter= and put all of that together.
 #+end_src
 *** Language server integration
 Use Eglot as a lighter-weight, built-in language server client, instead of =lsp-mode=.
+
+**** Optimisations
+Eglot and language servers can generate large amounts of IPC traffic and memory allocations. Configure a small number of global defaults which favour responsiveness during language server operation, without introducing any external dependencies (such as =gcmh=).
+
+#+begin_src emacs-lisp
+  (defvar +lsp--default-read-process-output-max nil)
+  (defvar +lsp--default-gc-cons-threshold nil)
+  (defvar +lsp--default-gc-cons-percentage nil)
+
+  (define-minor-mode +lsp-optimization-mode
+    "Deploy small GC and IPC optimisations for Eglot."
+    :global t
+    :init-value nil
+    (if +lsp-optimization-mode
+        (progn
+          (setq +lsp--default-read-process-output-max (default-value 'read-process-output-max))
+          (setq +lsp--default-gc-cons-threshold (default-value 'gc-cons-threshold))
+          (setq +lsp--default-gc-cons-percentage (default-value 'gc-cons-percentage))
+
+          (setq-default read-process-output-max (* 2 1024 1024))
+          (setq-default gc-cons-threshold (* 128 1024 1024))
+          (setq-default gc-cons-percentage 0.6))
+      (when (numberp +lsp--default-read-process-output-max)
+        (setq-default read-process-output-max +lsp--default-read-process-output-max))
+      (when (numberp +lsp--default-gc-cons-threshold)
+        (setq-default gc-cons-threshold +lsp--default-gc-cons-threshold))
+      (when (numberp +lsp--default-gc-cons-percentage)
+        (setq-default gc-cons-percentage +lsp--default-gc-cons-percentage))))
+#+end_src
+
 #+begin_src emacs-lisp :noweb yes
   (use-package eglot
     :defer t
@@ -1731,13 +1849,13 @@ Use Eglot as a lighter-weight, built-in language server client, instead of =lsp-
     :hook
     (prog-mode . (lambda ()
                    <<config-eglot-enable-on-supported-formats>>))
-    (eglot-managed-mode . +lsp-optimization-mode)
+    (eglot-managed-mode . (lambda ()
+                            (+lsp-optimization-mode (if eglot-managed-mode 1 -1))))
     :custom
-    (eglot-sync-connect 1)
-    (eglot-autoshutdown t)
-    <<config-eglot-auto-help>> 
     <<config-eglot-connection>>
-    <<config-eglot-loging>>
+    <<config-eglot-auto-help>>
+    :init
+    <<config-eglot-logging>>
     :general
     <<config-eglot-keybindings>>
     :config
@@ -1811,20 +1929,20 @@ Keep Eglot responsive by avoiding UI blocking during connection establishment, a
 ***** Connection behaviour
 #+name: config-eglot-connection
 #+begin_src emacs-lisp :tangle no :noweb yes
-(setq eglot-sync-connect 0
-      eglot-autoshutdown t
-      eglot-extend-to-xref t)
+  (eglot-sync-connect 0)
+  (eglot-autoshutdown t)
+  (eglot-extend-to-xref t)
 #+end_src
 
 ***** Logging and progress reporting
 #+name: config-eglot-logging
-#+begin_src emacs-lisp :tangle no noweb yes
-(setq jsonrpc-event-hook nil)
-(when (boundp 'eglot-events-buffer-size)
-  (setq eglot-events-buffer-size 0))
-(setq eglot-events-buffer-config '(:size 0 :format short))
+#+begin_src emacs-lisp :tangle no :noweb yes
+  (setq jsonrpc-event-hook nil)
+  (when (boundp 'eglot-events-buffer-size)
+    (setq eglot-events-buffer-size 0))
+  (setq eglot-events-buffer-config '(:size 0 :format short))
 
-(setq eglot-report-progress nil)
+  (setq eglot-report-progress nil)
 #+end_src
 
 **** Booster
@@ -1847,6 +1965,57 @@ Improve the performance of Eglot. This requires the installation of [[https://gi
       (start/leader-keys
     	     "c s" '(consult-eglot-symbols :wk "Code Symbols")))
 #+end_src
+
+**** ElDoc box
+A childframe box for ElDoc documentation.
+
+#+begin_src emacs-lisp
+  (use-package eldoc-box
+    :ensure t
+    :after (eldoc eglot)
+    :hook (eglot-managed-mode . eldoc-box-hover-mode))
+#+end_src
+
+*** Debugger
+Use =dape= because =dap-mode= is bound to =lsp-mode=.
+
+#+begin_src emacs-lisp
+  (defcustom dysthesis/codelldb-path (executable-find "codelldb")
+    "Path to the codelldb installation."
+    :type 'string)
+
+  (use-package dape
+    :ensure t
+    :hook
+    (kill-emacs . dape-breakpoint-save)
+    (after-init . dape-breakpoint-load)
+    :custom
+    (dape-buffer-window-arrangement 'right)
+    (dape-cwd-function 'projectile-project-root)
+    :config
+    (add-hook 'dape-compile-hook 'kill-buffer)
+    (add-to-list 'dape-configs
+                 `(codelldb-rust
+                   modes (rust-mode rust-ts-mode)
+                   command dysthesis/codelldb-path
+                   :type "lldb"
+                   :request "launch"
+                   command-args ("--port" :autoport "--settings" "{\"sourceLanguages\":[\"rust\"]}")
+                   ensure dape-ensure-command port :autoport fn dape-config-autoport
+                   :cwd dape-cwd-fn
+                   :program (lambda ()
+                              (let* ((project-root (dape-cwd))
+                                     (project-name (file-name-nondirectory
+                                                    (directory-file-name project-root))))
+                                (file-name-concat "target" "debug" project-name)))
+                   :args [])))
+
+  (use-package repeat
+    :ensure nil
+    :config
+    (repeat-mode 1))
+#+end_src
+
 *** Languages
 **** Rust
 =rustic= causes Rust buffers to crash for some reason, so we use =rust-mode= for now. I have yet to encounter a need for the extra features offered by =rustic=.
@@ -1877,6 +2046,12 @@ Improve the performance of Eglot. This requires the installation of [[https://gi
     :hook (nix-mode . eglot-ensure))
 #+END_SRC
 
+**** Haskell
+#+BEGIN_SRC emacs-lisp
+  (use-package haskell-mode
+    :ensure t)
+#+END_SRC
+
 **** Zig
 #+begin_src emacs-lisp
   (use-package zig-mode
@@ -1897,6 +2072,36 @@ Improve the performance of Eglot. This requires the installation of [[https://gi
        	(let ((inhibit-read-only t))
      	  (ansi-color-apply-on-region compilation-filter-start (point))))
         (add-hook 'compilation-filter-hook 'colorize-compilation-buffer))))
+#+end_src
+
+**** Python
+#+begin_src emacs-lisp
+  (use-package python
+    :ensure nil
+    :after eglot
+    :mode ("[./]flake8\\'" . conf-mode)
+    :mode ("/Pipfile\\'" . conf-mode)
+    :init
+    (add-to-list 'eglot-server-programs
+                 '((python-mode python-ts-mode)
+                   "basedpyright-langserver" "--stdio")))
+
+  (use-package anaconda-mode
+    :ensure t
+    :defer t
+    :after python
+    :init
+    (setq anaconda-mode-eldoc-as-single-line t)
+    :config
+    (general-define-key
+     :states '(normal visual insert emacs)
+     :prefix "SPC"
+     :non-normal-prefix "C-SPC"
+     "g d" 'anaconda-mode-find-definitions
+     "g h" 'anaconda-mode-show-doc
+     "g a" 'anaconda-mode-find-assignments
+     "g f" 'anaconda-mode-find-file
+     "g u" 'anaconda-mode-find-references))
 #+end_src
 *** Direnv
 Load per-project environments with Direnv.
@@ -1943,6 +2148,610 @@ Configure some basic appearance tweaks.
    '(org-document-title ((t (:height 2.0 :weight heavy)))))
 #+end_src
 
+*** Bibliography
+Configure citations and bibliography management via =citar= and =org-cite=.
+
+#+begin_src emacs-lisp
+  (defvar dysthesis/bibliography-files '("~/Library/Library.bib")
+    "List of bibliography files used by citar and org-cite.")
+#+end_src
+
+#+BEGIN_SRC emacs-lisp
+  (use-package citar
+    :ensure t
+    :demand t
+    :custom
+    (citar-bibliography dysthesis/bibliography-files)
+    :hook
+    ((org-mode LaTeX-mode) . citar-capf-setup)
+    :general
+    ("C-c o" 'citar-open)
+    ("C-c b" 'org-cite-insert))
+#+END_SRC
+
+*** Core
+#+begin_src emacs-lisp
+  (require 'cl-lib)
+  (require 'subr-x)
+
+  (use-package org
+    :ensure nil
+    :general
+    ("C-c c" 'org-capture)
+    ("S-RET" 'org-open-at-point)
+    :custom
+    (org-archive-location (concat org-directory "archive.org::* From =%s="))
+    (org-preview-latex-default-process 'dvisvgm)
+    (org-highlight-latex-and-related '(latex script entities))
+    (org-cite-global-bibliography dysthesis/bibliography-files)
+    (org-cite-insert-processor 'citar)
+    (org-cite-follow-processor 'citar)
+    (org-cite-activate-processor 'citar))
+#+end_src
+
+*** Agenda
+#+BEGIN_SRC emacs-lisp
+  (defun dysthesis/agenda ()
+    (interactive)
+    (org-agenda nil "o"))
+
+  (use-package org-agenda
+    :ensure nil
+    :after org
+    :general
+    ("C-c a" 'dysthesis/agenda)
+    :custom
+    (org-todo-keywords
+     '((sequence "TODO(t)" "NEXT(n)" "WAIT(w)" "PROG(p)" "|" "DONE(d)" "|" "CANCEL(c)")))
+    (org-agenda-sorting-strategy
+     '((urgency-up deadline-up priority-down effort-up)))
+    (org-agenda-start-day "0d")
+    (org-agenda-skip-scheduled-if-done t)
+    (org-agenda-skip-deadline-if-done t)
+    (org-agenda-include-deadlines t)
+    (org-agenda-block-separator nil)
+    :config
+    (let ((gtd-dir (expand-file-name "GTD/" org-directory)))
+      (setq org-agenda-files
+            (if (file-directory-p gtd-dir)
+                (directory-files-recursively gtd-dir "\\.org$")
+              nil)))
+    (setq org-refile-targets
+          `((,(expand-file-name "GTD/gtd.org" org-directory) :maxlevel . 2)
+            (,(expand-file-name "GTD/someday.org" org-directory) :maxlevel . 2)
+            (,(expand-file-name "GTD/tickler.org" org-directory) :maxlevel . 2)
+            (,(expand-file-name "GTD/routine.org" org-directory) :maxlevel . 2)
+            (,(expand-file-name "GTD/reading.org" org-directory) :maxlevel . 2))))
+#+END_SRC
+
+**** GTD functions
+#+begin_src emacs-lisp
+  (defun dysthesis/mark-inbox-todos ()
+    "Mark entries in the agenda whose category is inbox for future bulk action."
+    (let ((entries-marked 0)
+          (regexp "inbox")
+          category-at-point)
+      (save-excursion
+        (goto-char (point-min))
+        (goto-char (next-single-property-change (point) 'org-hd-marker))
+        (while (re-search-forward regexp nil t)
+          (setq category-at-point (get-text-property (match-beginning 0) 'org-category))
+          (if (or (get-char-property (point) 'invisible)
+                  (not category-at-point))
+              (beginning-of-line 2)
+            (when (string-match-p regexp category-at-point)
+              (setq entries-marked (1+ entries-marked))
+              (call-interactively 'org-agenda-bulk-mark))))
+        (unless entries-marked
+          (message "No entry matching 'inbox'.")))))
+
+  (defun dysthesis/org-agenda-process-inbox-item ()
+    "Process a single item in the org-agenda."
+    (org-with-wide-buffer
+     (org-agenda-set-tags)
+     (org-agenda-priority)
+
+     (let* ((hdmarker (org-get-at-bol 'org-hd-marker))
+            (category (completing-read "Category: "
+                                       '("University" "Home" "Tinkering" "Read"))))
+       (with-current-buffer (marker-buffer hdmarker)
+         (goto-char (marker-position hdmarker))
+         (org-set-property "CATEGORY" category))
+
+       (call-interactively 'dysthesis/my-org-agenda-set-effort)
+       (org-agenda-refile nil nil t))))
+
+  (defvar dysthesis/org-current-effort "1:00"
+    "Current effort for agenda items.")
+
+  (defun dysthesis/my-org-agenda-set-effort (effort)
+    "Set the effort property for the current headline."
+    (interactive
+     (list (read-string (format "EFFORT [%s]: " dysthesis/org-current-effort)
+                        nil nil dysthesis/org-current-effort)))
+    (setq dysthesis/org-current-effort effort)
+    (org-agenda-check-no-diary)
+    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
+                         (org-agenda-error)))
+           (buffer (marker-buffer hdmarker))
+           (pos (marker-position hdmarker))
+           (inhibit-read-only t)
+           newhead)
+      (org-with-remote-undo buffer
+        (with-current-buffer buffer
+          (widen)
+          (goto-char pos)
+          (org-fold-show-context 'agenda)
+          (funcall-interactively 'org-set-effort nil dysthesis/org-current-effort)
+          (end-of-line 1)
+          (setq newhead (org-get-heading)))
+        (org-agenda-change-all-lines newhead hdmarker))))
+
+  (defun dysthesis/bulk-process-entries ()
+    (when org-agenda-bulk-marked-entries
+      (let ((entries (reverse org-agenda-bulk-marked-entries))
+            (processed 0)
+            (skipped 0))
+        (dolist (e entries)
+          (let ((pos (text-property-any (point-min) (point-max) 'org-hd-marker e)))
+            (if (not pos)
+                (progn (message "Skipping removed entry at %s" e)
+                       (cl-incf skipped))
+              (goto-char pos)
+              (let (org-loop-over-headlines-in-active-region)
+                (funcall 'dysthesis/org-agenda-process-inbox-item))
+              (when (or (memq 'org-add-log-note (default-value 'post-command-hook))
+                        (memq 'org-add-log-note post-command-hook))
+                (org-add-log-note))
+              (cl-incf processed))))
+        (org-agenda-redo)
+        (unless org-agenda-persistent-marks
+          (org-agenda-bulk-unmark-all))
+        (message "Acted on %d entries%s%s"
+                 processed
+                 (if (= skipped 0)
+                     ""
+                   (format ", skipped %d (disappeared before their turn)"
+                           skipped))
+                 (if (not org-agenda-persistent-marks) "" " (kept marked)")))))
+
+  (defun dysthesis/org-process-inbox ()
+    "Called in org-agenda-mode, processes all inbox items."
+    (interactive)
+    (dysthesis/mark-inbox-todos)
+    (dysthesis/bulk-process-entries))
+
+  (setq org-log-done 'time
+        org-log-into-drawer t
+        org-log-state-notes-insert-after-drawers nil)
+
+  (defun log-todo-next-creation-date (&rest _ignore)
+    "Log NEXT creation time in the property drawer under the key 'ACTIVATED'."
+    (when (and (string= (org-get-todo-state) "NEXT")
+               (not (org-entry-get nil "ACTIVATED")))
+      (org-entry-put nil "ACTIVATED" (format-time-string "[%Y-%m-%d]"))))
+
+  (add-hook 'org-after-todo-state-change-hook #'log-todo-next-creation-date)
+#+end_src
+
+**** Org-super-agenda
+Better agenda views.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package org-super-agenda
+    :ensure t
+    :after org-agenda
+    :custom
+    (org-super-agenda-keep-order t)
+    (org-agenda-custom-commands
+     '(("o" "Overview"
+        ((agenda "" ((org-agenda-span 'day)
+                     (org-super-agenda-groups
+                      '((:name "Today"
+                               :time-grid t
+                               :deadline today
+                               :scheduled today
+                               :order 0)
+                        (:habit t
+                                :order 1)
+                        (:name "Overdue"
+                               :deadline past
+                               :scheduled past
+                               :order 2)
+                        (:name "Upcoming"
+                               :and (:deadline future
+                                               :priority>= "B")
+                               :and (:scheduled future
+                                                :priority>= "B")
+                               :order 3)
+                        (:discard (:anything t))))))
+         (alltodo "" ((org-agenda-overriding-header "")
+                      (org-super-agenda-groups
+                       '((:name "Ongoing"
+                                :todo "PROG"
+                                :order 0)
+                         (:name "Up next"
+                                :todo "NEXT"
+                                :order 1)
+                         (:name "Waiting"
+                                :todo "WAIT"
+                                :order 2)
+                         (:name "Important"
+                                :priority "A"
+                                :order 3)
+                         (:name "Inbox"
+                                :file-path "inbox"
+                                :order 4)
+                         (:name "University"
+                                :category "University"
+                                :tag ("university" "uni" "assignment" "exam")
+                                :order 5)
+                         (:name "Tinkering"
+                                :category "Tinkering"
+                                :tag ("nix" "nixos" "voidlinux" "neovim" "gentoo" "emacs" "tinker")
+                                :order 6)
+                         (:name "Reading list"
+                                :category "Read"
+                                :tag "read"
+                                :order 6)))))))))
+    :config
+    (let ((inhibit-message t))
+      (org-super-agenda-mode)))
+#+END_SRC
+
+*** Capture templates
+#+BEGIN_SRC emacs-lisp
+  (use-package doct
+    :ensure t
+    :commands (doct)
+    :init
+    (setq org-capture-templates
+          (doct '((" Todo"
+                   :keys "t"
+                   :prepend t
+                   :file "GTD/inbox.org"
+                   :headline "Tasks"
+                   :type entry
+                   :template ("* TODO %? %{extra}")
+                   :children ((" General"
+                               :keys "t"
+                               :extra "")
+                              ("󰈸 With deadline"
+                               :keys "d"
+                               :extra "\nDEADLINE: %^{Deadline:}t")
+                              ("󰥔 With schedule"
+                               :keys "s"
+                               :extra "\nSCHEDULED: %^{Start time:}t")))
+                  ("Bookmark"
+                   :keys "b"
+                   :prepend t
+                   :file "bookmarks.org"
+                   :type entry
+                   :template "* TODO [[%:link][%:description]] :bookmark:\n\n"
+                   :immediate-finish t)))))
+#+END_SRC
+
+*** DWIM at point
+#+begin_src emacs-lisp
+  (defun +org--toggle-inline-images-in-subtree (&optional beg end)
+    "Toggle inline images between BEG and END."
+    (let ((beg (or beg (point-min)))
+          (end (or end (point-max))))
+      (if org-inline-image-overlays
+          (org-remove-inline-images beg end)
+        (org-display-inline-images nil nil beg end))))
+
+  (defun +org-get-todo-keywords-for (_keyword)
+    "Return a reasonable default list of TODO keywords for the current buffer."
+    (or (bound-and-true-p org-todo-keywords-1) '("TODO")))
+
+  (defun +org/dwim-at-point (&optional arg)
+    "Do-what-I-mean at point."
+    (interactive "P")
+    (if (button-at (point))
+        (call-interactively #'push-button)
+      (let* ((context (org-element-context))
+             (type (org-element-type context)))
+        (while (and context (memq type '(verbatim code bold italic underline strike-through subscript superscript)))
+          (setq context (org-element-property :parent context)
+                type (org-element-type context)))
+        (pcase type
+          ((or `citation `citation-reference)
+           (org-cite-follow context arg))
+
+          (`headline
+           (cond ((memq (bound-and-true-p org-goto-map)
+                        (current-active-maps))
+                  (org-goto-ret))
+                 ((and (fboundp 'toc-org-insert-toc)
+                       (member "TOC" (org-get-tags)))
+                  (toc-org-insert-toc)
+                  (message "Updating table of contents"))
+                 ((string= "ARCHIVE" (car-safe (org-get-tags)))
+                  (org-force-cycle-archived))
+                 ((or (org-element-property :todo-type context)
+                      (org-element-property :scheduled context))
+                  (org-todo
+                   (if (eq (org-element-property :todo-type context) 'done)
+                       (or (car (+org-get-todo-keywords-for (org-element-property :todo-keyword context)))
+                           'todo)
+                     'done))))
+           (org-update-checkbox-count)
+           (org-update-parent-todo-statistics)
+           (when (and (fboundp 'toc-org-insert-toc)
+                      (member "TOC" (org-get-tags)))
+             (toc-org-insert-toc)
+             (message "Updating table of contents"))
+           (let* ((beg (if (org-before-first-heading-p)
+                           (line-beginning-position)
+                         (save-excursion (org-back-to-heading) (point))))
+                  (end (if (org-before-first-heading-p)
+                           (line-end-position)
+                         (save-excursion (org-end-of-subtree) (point))))
+                  (overlays (ignore-errors (overlays-in beg end)))
+                  (latex-overlays
+                   (cl-find-if (lambda (o) (eq (overlay-get o 'org-overlay-type) 'org-latex-overlay))
+                               overlays))
+                  (image-overlays
+                   (cl-find-if (lambda (o) (overlay-get o 'org-image-overlay))
+                               overlays)))
+             (+org--toggle-inline-images-in-subtree beg end)
+             (if (or image-overlays latex-overlays)
+                 (org-clear-latex-preview beg end)
+               (if (fboundp 'org--latex-preview-region)
+                   (org--latex-preview-region beg end)
+                 (org-latex-preview arg)))))
+
+          (`clock (org-clock-update-time-maybe))
+
+          (`footnote-reference
+           (org-footnote-goto-definition (org-element-property :label context)))
+
+          (`footnote-definition
+           (org-footnote-goto-previous-reference (org-element-property :label context)))
+
+          ((or `planning `timestamp)
+           (org-follow-timestamp-link))
+
+          ((or `table `table-row)
+           (if (org-at-TBLFM-p)
+               (org-table-calc-current-TBLFM)
+             (ignore-errors
+               (save-excursion
+                 (goto-char (org-element-property :contents-begin context))
+                 (org-call-with-arg 'org-table-recalculate (or arg t))))))
+
+          (`table-cell
+           (org-table-blank-field)
+           (org-table-recalculate arg)
+           (when (and (string-empty-p (string-trim (org-table-get-field)))
+                      (bound-and-true-p evil-local-mode))
+             (evil-change-state 'insert)))
+
+          (`babel-call
+           (org-babel-lob-execute-maybe))
+
+          (`statistics-cookie
+           (save-excursion (org-update-statistics-cookies arg)))
+
+          ((or `src-block `inline-src-block)
+           (org-babel-execute-src-block arg))
+
+          ((or `latex-fragment `latex-environment)
+           (org-latex-preview arg))
+
+          (`link
+           (let* ((lineage (org-element-lineage context '(link) t))
+                  (path (org-element-property :path lineage)))
+             (if (or (equal (org-element-property :type lineage) "img")
+                     (and path (image-type-from-file-name path)))
+                 (+org--toggle-inline-images-in-subtree
+                  (org-element-property :begin lineage)
+                  (org-element-property :end lineage))
+               (org-open-at-point arg))))
+
+          ((guard (org-element-property :checkbox (org-element-lineage context '(item) t)))
+           (org-toggle-checkbox))
+
+          (`paragraph
+           (+org--toggle-inline-images-in-subtree))
+
+          (_
+           (if (or (org-in-regexp org-ts-regexp-both nil t)
+                   (org-in-regexp org-tsr-regexp-both nil  t)
+                   (org-in-regexp org-link-any-re nil t))
+               (call-interactively #'org-open-at-point)
+             (+org--toggle-inline-images-in-subtree
+              (org-element-property :begin context)
+              (org-element-property :end context))))))))
+#+end_src
+
+*** Evil mode integration
+#+BEGIN_SRC emacs-lisp
+  (use-package evil-org
+    :ensure t
+    :after org
+    :hook (org-mode . evil-org-mode)
+    :config
+    (with-eval-after-load 'evil-org
+      (define-key org-mode-map (kbd "<normal-state> RET") '+org/dwim-at-point))
+    (require 'evil-org-agenda)
+    (evil-org-agenda-set-keys))
+#+END_SRC
+
+*** Org-roam
+#+BEGIN_SRC emacs-lisp :noweb yes
+  (use-package org-roam
+    :ensure t
+    :custom
+    (org-roam-directory (file-truename (expand-file-name "Roam/" org-directory)))
+    (org-roam-complete-everywhere t)
+    (org-roam-buffer-window-parameters '((no-delete-other-windows . t)))
+    (org-roam-link-use-custom-faces 'everywhere)
+    <<org-roam-capture-templates>>
+    <<org-roam-dailies-config>>
+    :general
+    ("C-c n" '(:ignore t
+                       :wk "Org-roam"))
+    ("C-c n l" '(org-roam-buffer-toggle
+                 :wk "Toggle org-roam buffer"))
+    ("C-c n f" '(org-roam-node-find
+                 :wk "Find org-roam node"))
+    ("C-c n d" '(:keymap org-roam-dailies-map
+                         :package org-roam
+                         :wk "Org-roam dailies"))
+    ("C-c n i" '(org-roam-node-insert
+                 :wk "Insert org-roam node"))
+    ("C-c n c" '(org-roam-capture
+                 :wk "Capture into org-roam node"))
+    ("C-c n t" '(org-roam-tag-add :wk "Add tag to current org-roam node"))
+    ("C-c n a" '(org-roam-alias-add :wk "Add alias to current org-roam node"))
+    :config
+    (setq org-roam-node-display-template
+          (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
+    (org-roam-db-autosync-mode)
+    (require 'org-roam-protocol))
+#+END_SRC
+
+**** Capture templates
+#+name:org-roam-capture-templates
+#+BEGIN_SRC emacs-lisp :tangle no
+  (org-roam-capture-templates
+   '(("d" " Default" plain
+      "%?"
+      :if-new (file+head "${slug}.org"
+                         "#+title: ${title}\n#+STARTUP: latexpreview")
+      :immediate-finish t
+      :unnarrowed t)
+     ("i" "󰆼 Index note" plain
+      "%?"
+      :if-new (file+head "${slug}.org"
+                         "#+title: ${title}\n#+filetags: :new:index:")
+      :immediate-finish t
+      :unarrowed t)
+     ("e" "󰖟 Elfeed" plain
+      "%?"
+      :target (file+head "Elfeed/${slug}.org"
+                         "#+title: ${title}\n#+filetags: :new:article:rss:\n#+STARTUP: latexpreview")
+      :unnarrowed t)
+     ("l" "󰙨 Literature note" plain
+      "%?"
+      :target
+      (file+head
+       "%(expand-file-name (or citar-org-roam-subdir \"\") org-roam-directory)/Literature/${citar-citekey}.org"
+       "#+title: ${note-title}.\n#+filetags: :new:\n#+created: %U\n#+last_modified: %U\n#+STARTUP: latexpreview\n#+url: ${citar-howpublished}\n\n* Annotations\n:PROPERTIES:\n:Custom_ID: ${citar-citekey}\n:NOTER_DOCUMENT: ${citar-file}\n:NOTER_PAGE: \n:END:\n\n")
+      :unnarrowed t)
+     ("I" " Idea" plain "%?"
+      :if-new
+      (file+head "${slug}.org"
+                 "#+title: ${title}\n#+filetags: :idea:new:\n#+STARTUP: latexpreview\n")
+      :immediate-finish t
+      :unnarrowed t)))
+#+END_SRC
+
+**** Org-roam-dailies
+#+NAME: org-roam-dailies-config
+#+BEGIN_SRC emacs-lisp :tangle no
+  (org-roam-dailies-capture-templates
+   '(("d" "default" entry "* %<%H:%M> %?"
+      :if-new (file+head "%<%Y-%m-%d>.org" "#+title: %<%Y-%m-%d>\n"))))
+  (org-roam-dailies-directory "Daily/")
+#+END_SRC
+
+**** Citar integration
+#+BEGIN_SRC emacs-lisp :noweb yes
+  (use-package citar-org-roam
+    :ensure t
+    :after (:any citar org org-roam)
+    :custom
+    (citar-org-roam-capture-template-key "l")
+    (citar-org-roam-note-title-template "${author} - ${title}")
+    <<citar-org-roam-template-fields>>
+    :config
+    (citar-org-roam-mode 1))
+#+END_SRC
+
+#+name:citar-org-roam-template-fields
+#+BEGIN_SRC emacs-lisp :tangle no
+  (citar-org-roam-template-fields
+   '((:citar-title . ("title"))
+     (:citar-author . ("author" "editor"))
+     (:citar-date . ("date" "year" "issued"))
+     (:citar-pages . ("pages"))
+     (:citar-type . ("=type="))
+     (:citar-file . ("file"))
+     (:citar-howpublished . ("howpublished"))))
+#+END_SRC
+
+**** Timestamps
+Add a creation date and maintain a last edited date for each Org-roam node.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package org-roam-timestamps
+    :ensure t
+    :after org-roam
+    :config
+    (org-roam-timestamps-mode))
+#+END_SRC
+
+*** Org-ref
+#+BEGIN_SRC emacs-lisp
+  (use-package org-ref
+    :ensure t
+    :after org
+    :custom
+    (org-ref-default-bibliography dysthesis/bibliography-files)
+    (org-ref-pdf-directory "~/Library/Files")
+    (org-ref-notes-directory (expand-file-name "Roam/Literature/" org-directory)))
+#+END_SRC
+
+*** Org-noter
+#+BEGIN_SRC emacs-lisp
+  (use-package org-noter
+    :ensure t
+    :after org
+    :custom
+    (org-noter-always-create-frame nil)
+    (org-noter-hide-other nil)
+    (org-noter-notes-search-path (list org-directory)))
+#+END_SRC
+
+*** Org-babel
+**** Auto-tangle
+Automatically tangle all code blocks on Org-mode files marked with =#+auto_tangle: t=.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package org-auto-tangle
+    :ensure t
+    :defer t
+    :hook (org-mode . org-auto-tangle-mode))
+#+END_SRC
+
+*** LaTeX
+**** Configurations
+#+begin_src emacs-lisp
+  (plist-put org-format-latex-options :foreground "White")
+  (plist-put org-format-latex-options :background nil)
+  (plist-put org-format-latex-options :scale 0.65)
+#+end_src
+
+**** Automatically preview fragments
+#+BEGIN_SRC emacs-lisp
+  (use-package org-fragtog
+    :ensure t
+    :after org
+    :hook (org-mode . org-fragtog-mode))
+#+END_SRC
+
+**** TikZ plot preview
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'org-latex-packages-alist
+               '("" "tikz" t))
+
+  (eval-after-load "preview"
+    '(add-to-list 'preview-default-preamble "\\PreviewEnvironment{tikzpicture}" t))
+#+END_SRC
+
 *** Org-modern
 An alternative to this package is Doom's built-in =+pretty= module for Org. It doesn't do enough for my tastes, however, while Org-modern does. Most of the code in this section are simply taken from Org-modern's README, as well as [[https://tecosaur.github.io/emacs-config/config.html][Tecosaur's Doom Emacs configuration]].
 
@@ -1966,6 +2775,13 @@ By default, Org-mode always displays emphasis markers and other such elements, w
 
 #+begin_src emacs-lisp
 (setq org-hide-emphasis-markers t)
+#+end_src
+
+#+begin_src emacs-lisp
+  (use-package org-appear
+    :ensure t
+    :after org
+    :hook (org-mode . org-appear-mode))
 #+end_src
 
 
@@ -2104,3 +2920,201 @@ Invoke the =global-org-modern-mode= to always enable this mode.
   :config
   (global-org-modern-mode 1))
 #+end_src
+
+** RSS reading
+#+begin_src emacs-lisp
+  (use-package elfeed
+    :ensure t
+    :after evil
+    :bind ("C-c e" . elfeed)
+    :config
+    (setq elfeed-feeds
+          '("http://nullprogram.com/feed/"
+            "https://matklad.github.io/feed.xml"
+            "https://xeiaso.net/blog.rss"
+            "https://sthbrx.github.io/rss.xml"
+            "https://morss.it/without.boats/index.xml"
+            "https://kristoff.it/index.xml"
+            "https://fasterthanli.me/index.xml"
+            "https://ayats.org/feed.xml"
+            "https://morss.it/jeremykun.com/feed/"
+            "https://morss.it/mitchellh.com/feed.xml"
+            "https://blog.regehr.org/feed"
+            "https://lobste.rs/t/rust,zig,c,osdev,nix,emacs,vim,security,performance,plt,distributed,cryptography,hardware,science,c++,haskell,elixir,linux,android,privacy,reversing,virtualization,compilers,editors,vcs.rss"
+            "https://hnrss.org/frontpage"
+            "https://mmapped.blog/feed.xml"
+            "https://smallcultfollowing.com/babysteps//atom.xml"
+            "https://justine.lol/rss.xml"
+            "https://blog.cryptographyengineering.com/feed/"
+            "https://steveklabnik.com/writing"
+            "https://awesomekling.github.io/feed.xml"
+            "https://dataswamp.org/~solene/rss.xml"
+            "https://blogsystem5.substack.com/feed"
+            "https://scottaaronson.blog/"
+            "https://eli.thegreenplace.net/feeds/all.atom.xml"
+            "https://lemire.me/blog/feed/"
+            "https://syst3mfailure.io/feed.xml"
+            "https://mcyoung.xyz/feed"
+            "https://eli.thegreenplace.net/feeds/all.atom.xml"))
+    (setq elfeed-search-filter "@2-week-ago +unread"))
+
+  (with-eval-after-load 'elfeed
+    (evil-set-initial-state 'elfeed-search-mode 'normal)
+    (evil-set-initial-state 'elfeed-show-mode   'normal))
+
+  (defun dysthesis/elfeed-capture-entry ()
+    (interactive)
+    (if (eq major-mode 'elfeed-show-mode)
+        (let* ((entry elfeed-show-entry)
+               (link (elfeed-entry-link entry))
+               (title (elfeed-entry-title entry)))
+          (if (and (fboundp 'org-roam-capture-)
+                   (fboundp 'org-roam-node-create))
+              (progn
+                (org-roam-capture- :keys "e"
+                                  :node (org-roam-node-create :title title))
+                (insert link))
+            (message "Org-roam capture is unavailable.")))
+      (message "Not in elfeed-show mode!")))
+
+  (with-eval-after-load 'elfeed-search
+    (evil-define-key 'normal elfeed-search-mode-map
+      "q" #'quit-window
+      "g" #'elfeed-update
+      "u" #'elfeed-search-tag-all-unread
+      "r" #'elfeed-search-untag-all-unread
+      "s" #'elfeed-search-live-filter
+      (kbd "RET") #'elfeed-search-show-entry
+      "b" #'elfeed-search-browse-url
+      "y" #'elfeed-search-yank))
+
+  (with-eval-after-load 'elfeed-show
+    (evil-define-key 'normal elfeed-show-mode-map
+      "q" #'quit-window
+      "n" #'elfeed-show-next
+      "p" #'elfeed-show-prev
+      "r" #'elfeed-show-refresh
+      "b" #'elfeed-show-visit
+      "y" #'elfeed-show-yank
+      "c" #'dysthesis/elfeed-capture-entry))
+#+end_src
+
+** EPUB reading
+#+BEGIN_SRC emacs-lisp
+  (use-package nov
+    :ensure t
+    :mode ("\\.epub\\'" . nov-mode)
+    :config
+    (defun dysthesis/nov-mode-setup ()
+      "Tweak nov-mode to be comfortable for long-form reading."
+      (face-remap-add-relative 'variable-pitch
+                               :family "Georgia Pro"
+                               :height 1.4)
+      (face-remap-add-relative 'default :height 1.3)
+      (setq-local line-spacing 0.2
+                  next-screen-context-lines 4
+                  shr-use-colors nil)
+      (when (require 'visual-fill-column nil t)
+        (setq-local visual-fill-column-center-text t
+                    visual-fill-column-width 81
+                    nov-text-width 80)
+        (visual-fill-column-mode 1))
+      (hl-line-mode -1))
+    (add-hook 'nov-mode-hook #'dysthesis/nov-mode-setup))
+#+END_SRC
+
+** Terminal emulation
+#+begin_src emacs-lisp
+  (use-package eat
+    :ensure t
+    :custom
+    (eat-enable-auto-line-mode t)
+    (eat-enable-yank-to-terminal t)
+    (eat-enable-kill-from-terminal t)
+    :bind (("C-x E" . eat)
+           :map project-prefix-map
+           ("t" . eat-project)))
+#+end_src
+
+** Miscellaneous
+*** Default shell
+#+begin_src emacs-lisp
+  (setq-default shell-file-name (executable-find "bash"))
+#+end_src
+
+*** Async
+#+BEGIN_SRC emacs-lisp
+  (use-package async
+    :ensure t
+    :config
+    (autoload 'dired-async-mode "dired-async.el" nil t)
+    (dired-async-mode 1))
+
+  (use-package ob-async
+    :ensure t)
+#+END_SRC
+
+*** Undo history
+#+BEGIN_SRC emacs-lisp
+  (use-package undo-fu
+    :ensure t
+    :config
+    (global-unset-key (kbd "C-z"))
+    (global-set-key (kbd "C-z")   'undo-fu-only-undo)
+    (global-set-key (kbd "C-S-z") 'undo-fu-only-redo))
+
+  (use-package undo-fu-session
+    :ensure t
+    :config
+    (undo-fu-session-global-mode))
+#+END_SRC
+
+*** Garbage Collector Magic Hack
+#+begin_src emacs-lisp
+  (use-package gcmh
+    :ensure t
+    :config
+    (gcmh-mode 1))
+#+end_src
+
+*** Highlight TODO keywords
+#+BEGIN_SRC emacs-lisp
+  (use-package hl-todo
+    :ensure t
+    :hook (prog-mode . hl-todo-mode)
+    :custom
+    (hl-todo-keyword-faces '(("TODO" warning bold)
+                             ("FIXME" error bold)
+                             ("HACK" font-lock-constant-face)
+                             ("PERF" font-lock-constant-face)
+                             ("NOTE" success bold)
+                             ("REVIEW" font-lock-keyword-face bold)
+                             ("DEPRECATED" font-lock-doc-face bold))))
+#+END_SRC
+
+*** Hide mode line
+#+BEGIN_SRC emacs-lisp
+  (use-package hide-mode-line
+    :ensure t)
+#+END_SRC
+
+*** Rainbow mode
+#+BEGIN_SRC emacs-lisp
+  (use-package rainbow-mode
+    :ensure t
+    :hook (emacs-lisp-mode . rainbow-mode))
+#+END_SRC
+
+*** PDF reading
+#+BEGIN_SRC emacs-lisp
+  (use-package pdf-tools
+    :ensure t
+    :defer t
+    :mode ("\\.pdf\\'" . pdf-view-mode)
+    :hook (pdf-view-mode . pdf-view-midnight-minor-mode)
+    :hook (pdf-view-mode . hide-mode-line-mode)
+    :custom
+    (pdf-view-midnight-colors '("#ffffff" . "#080808"))
+    :config
+    (pdf-tools-install))
+#+END_SRC
