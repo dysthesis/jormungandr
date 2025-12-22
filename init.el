@@ -415,6 +415,12 @@
   ;; load default config
   (require 'smartparens-config))
 
+(use-package aggressive-indent
+  :ensure t
+  :config
+  (global-aggressive-indent-mode 1)
+  (add-to-list 'aggressive-indent-excluded-modes 'html-mode))
+
 (setq dired-free-space nil
       dired-dwim-target t
       dired-deletion-confirmer 'y-or-n-p
@@ -767,6 +773,40 @@
    :prefix "SPC"
    :non-normal-prefix "C-SPC"
    "gg" '(magit :wk "Magit")))
+
+(use-package projectile
+  :ensure t
+  :diminish projectile-mode
+  :config
+  (general-define-key
+   :states '(normal visual insert emacs)
+   :prefix "SPC"
+   :non-normal-prefix "C-SPC"
+   "p" '(projectile-command-map :wk "+ Projectile"))
+  (projectile-mode)
+  :init
+  (setq projectile-project-search-path '("~/Documents/Projects"
+                                         "~/Documents/University"))
+  (setq projectile-switch-project-action #'projectile-dired))
+
+(use-package tree-sitter-langs
+  :ensure t)
+
+(use-package evil-textobj-tree-sitter
+  :ensure t
+  :after (evil tree-sitter)
+  :config
+  (define-key evil-outer-text-objects-map "f"
+              (evil-textobj-tree-sitter-get-textobj ("function.outer")))
+  (define-key evil-inner-text-objects-map "f"
+              (evil-textobj-tree-sitter-get-textobj("function.inner")))
+  (define-key evil-inner-text-objects-map "i"
+              (evil-textobj-tree-sitter-get-textobj ("parameter.inner")))
+  (define-key evil-outer-text-objects-map "i"
+              (evil-textobj-tree-sitter-get-textobj ("parameter.outer")))
+  (define-key evil-outer-text-objects-map "a"
+              (evil-textobj-tree-sitter-get-textobj ("conditional.outer"
+                                                     "loop.outer"))))
 
 (setq org-directory "~/Org/")
 
