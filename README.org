@@ -1442,10 +1442,11 @@ Use a secondary theme to distinguish between 'real' buffers and everything else.
 #+end_src
 
 *** Line numbering
-Set the line numbering to =relative= for easy Vim motions.
+Enable relative line numbers in programming buffers for easy Vim motions.
 
 #+begin_src emacs-lisp
 (setq display-line-numbers-type 'relative)
+(add-hook 'prog-mode-hook #'display-line-numbers-mode)
 #+end_src
 
 *** Mixed pitch
@@ -1997,11 +1998,12 @@ Some formats do not support language servers, such as Emacs Lisp, Makefile, /etc
 
 #+name:config-eglot-enable-on-supported-formats
 #+begin_src emacs-lisp :noweb yes :tangle no
-  (unless (derived-mode-p 'emacs-lisp-mode
-                          'lisp-mode
-                          'makefile-mode
-                          'snippet-mode)
-    (eglot-ensure))
+(unless (derived-mode-p 'emacs-lisp-mode
+                        'lisp-mode
+                        'makefile-mode
+                        'snippet-mode
+                        'lean4-mode)
+  (eglot-ensure))
 #+end_src
 
 **** Disable automatic display of help buffer
@@ -2140,6 +2142,16 @@ Use =dape= because =dap-mode= is bound to =lsp-mode=.
     :ensure t)
 #+END_SRC
 
+**** Lean
+Lean 4 uses =lean4-mode=, which relies on =lsp-mode= rather than Eglot.
+
+#+begin_src emacs-lisp
+  (use-package lean4-mode
+    :ensure nil
+    :mode "\\.lean\\'"
+    :hook (lean4-mode . lsp-deferred))
+#+end_src
+
 **** Zig
 #+begin_src emacs-lisp
   (use-package zig-mode
@@ -2191,6 +2203,8 @@ Use =dape= because =dap-mode= is bound to =lsp-mode=.
      "g f" 'anaconda-mode-find-file
      "g u" 'anaconda-mode-find-references))
 #+end_src
+**** Lean
+
 *** Direnv
 Load per-project environments with Direnv.
 #+begin_src emacs-lisp

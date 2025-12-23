@@ -74,6 +74,41 @@
               ];
             };
 
+            lean4Mode = epkgs.trivialBuild {
+              pname = "lean4-mode";
+              version = "1.1.2";
+              src = pkgs.fetchFromGitHub {
+                owner = "leanprover-community";
+                repo = "lean4-mode";
+                rev = "1388f9d1429e38a39ab913c6daae55f6ce799479";
+                hash = "sha256-6XFcyqSTx1CwNWqQvIc25cuQMwh3YXnbgr5cDiOCxBk=";
+              };
+              packageRequires = [
+                epkgs.compat
+                epkgs.dash
+                epkgs.magit-section
+                epkgs.lsp-mode
+              ];
+              nativeBuildInputs = [
+                epkgs.compat
+                epkgs.dash
+                epkgs.magit-section
+                epkgs.lsp-mode
+              ];
+              installPhase = ''
+                runHook preInstall
+
+                LISPDIR=$out/share/emacs/site-lisp
+                install -d "$LISPDIR"
+                install *.el *.elc "$LISPDIR"
+                if [ -d data ]; then
+                  cp -r data "$LISPDIR/"
+                fi
+
+                runHook postInstall
+              '';
+            };
+
             localThemes = pkgs.runCommand "emacs-jormungandr-themes-0.0.0" {} ''
             pkgdir="$out/share/emacs/site-lisp/elpa/jormungandr-themes-0.0.0"
             mkdir -p "$pkgdir"
@@ -105,6 +140,7 @@
           in [
             epkgs.use-package
             orgModernIndent
+            lean4Mode
             localThemes
           ];
         };

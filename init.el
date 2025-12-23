@@ -1016,7 +1016,8 @@ Respects `diff-hl-disable-on-remote'."
                  (unless (derived-mode-p 'emacs-lisp-mode
                                          'lisp-mode
                                          'makefile-mode
-                                         'snippet-mode)
+                                         'snippet-mode
+                                         'lean4-mode)
                    (eglot-ensure))))
   (eglot-managed-mode . (lambda ()
                           (+lsp-optimization-mode (if eglot-managed-mode 1 -1))))
@@ -1125,6 +1126,11 @@ Respects `diff-hl-disable-on-remote'."
 
 (use-package haskell-mode
   :ensure t)
+
+(use-package lean4-mode
+  :ensure nil
+  :mode "\\.lean\\'"
+  :hook (lean4-mode . lsp-deferred))
 
 (use-package zig-mode
   :ensure t
