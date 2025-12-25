@@ -9,10 +9,10 @@
 
 ;; Please, install rainbow-mode.
 ;; Colors with +x are lighter. Colors with -x are darker.
-(let ((lackluster-fg        "#DDDDDD")
+(let ((lackluster-fg        "#ffffff")
       (lackluster-fg+1      "#cccccc")
       (lackluster-fg+2      "#aaaaaa")
-      (lackluster-white     "#deeeed")
+      (lackluster-white     "#ffffff")
       (lackluster-black     "#000000")
       (lackluster-bg-1      "#000000")
       (lackluster-bg        "#101010")
@@ -31,7 +31,7 @@
       (lackluster-niagara-1 "#8E8E8E")
       (lackluster-niagara   "#96a6c8")
       (lackluster-wisteria  "#9e95c7"))
-      
+  
   (custom-theme-set-variables
    'lackluster
    '(frame-background-mode (quote dark)))
@@ -51,7 +51,7 @@
    `(link ((t (:foreground ,lackluster-niagara :underline t))))
    `(link-visited ((t (:foreground ,lackluster-wisteria :underline t))))
    `(match ((t (:background ,lackluster-bg+4))))
-   `(shadow ((t (:foreground ,lackluster-bg+4))))
+   `(shadow ((t (:foreground ,lackluster-fg+2))))
    `(minibuffer-prompt ((t (:foreground ,lackluster-niagara))))
    `(region ((t (:background ,lackluster-bg+3 :foreground nil))))
    `(secondary-selection ((t ,(list :background lackluster-bg+3
@@ -124,7 +124,7 @@
 
    ;; Font Lock
    `(font-lock-builtin-face ((t (:foreground ,lackluster-yellow))))
-   `(font-lock-comment-face ((t (:foreground ,lackluster-brown))))
+   `(font-lock-comment-face ((t (:foreground ,lackluster-bg+4))))
    `(font-lock-comment-delimiter-face ((t (:foreground ,lackluster-brown))))
    `(font-lock-constant-face ((t (:foreground ,lackluster-quartz))))
    `(font-lock-doc-face ((t (:foreground ,lackluster-green))))
