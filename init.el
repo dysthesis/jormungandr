@@ -935,6 +935,10 @@ Respects `diff-hl-disable-on-remote'."
 
   (global-diff-hl-mode 1))
 
+(use-package magit-todos
+  :after magit
+  :config (magit-todos-mode 1))
+
 (use-package projectile
   :ensure t
   :diminish projectile-mode

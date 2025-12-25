@@ -1786,6 +1786,13 @@ Display a diff of the current file against =HEAD= in the fringe.
     (global-diff-hl-mode 1))
 #+end_src
 
+**** Collect todo keyword entries in the codebase
+#+begin_src emacs-lisp
+  (use-package magit-todos
+    :after magit
+    :config (magit-todos-mode 1))
+#+end_src
+
 ** Project management
 The Projectile package provides nice abstractions to treat directories as projects. It provides functionalities such as finding files or grepping in a project.
 
