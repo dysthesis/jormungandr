@@ -616,7 +616,23 @@
 (unless (daemonp)
   (dysthesis/configure-font (selected-frame)))
 
-(load-theme 'lackluster t)
+(use-package doom-themes
+  :ensure t
+  :custom
+  ;; Global settings (defaults)
+  (doom-themes-enable-bold t)   ; if nil, bold is universally disabled
+  (doom-themes-enable-italic t) ; if nil, italics is universally disabled
+  :config
+  (load-theme 'doom-mountain t)
+
+  ;; Enable flashing mode-line on errors
+  (doom-themes-visual-bell-config)
+  ;; Enable custom neotree theme (nerd-icons must be installed!)
+  (doom-themes-neotree-config)
+  ;; or for treemacs users
+  (doom-themes-treemacs-config)
+  ;; Corrects (and improves) org-mode's native fontification.
+  (doom-themes-org-config))
 
 (use-package solaire-mode
   :ensure t
@@ -1169,7 +1185,7 @@ Respects `diff-hl-disable-on-remote'."
 
 (use-package envrc
   :ensure t
-  :hook (after-init-hook . envrc-global-mode))
+  :hook (prog-mode . envrc-mode))
 
 (setq org-directory "~/Org/")
 
