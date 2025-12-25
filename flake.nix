@@ -165,29 +165,29 @@
         paths = [emacsWithDeps];
         postBuild = ''
           rm -f "$out/bin/emacs"
-          cat >"$out/bin/emacs" <<'EOF'
-            #!${pkgs.bash}/bin/bash
-            set -euo pipefail
+          cat >"$out/bin/emacs" <<-'EOF'
+		#!${pkgs.bash}/bin/bash
+		set -euo pipefail
 
-            config_home="''${XDG_CONFIG_HOME:-''${HOME}/.config}"
-            init_dir="''${EMACS_INIT_DIR:-''${config_home}/emacs}"
+		config_home="''${XDG_CONFIG_HOME:-''${HOME}/.config}"
+		init_dir="''${EMACS_INIT_DIR:-''${config_home}/emacs-jormungandr}"
 
-            ${pkgs.coreutils}/bin/mkdir -p "''${init_dir}"
+		${pkgs.coreutils}/bin/mkdir -p "''${init_dir}"
 
-            for file in init.el early-init.el README.org; do
-              target="''${init_dir}/''${file}"
-              if [ -e "''${target}" ] && [ ! -L "''${target}" ]; then
-                echo "Refusing to overwrite ''${target} because it is not a symlink. Set EMACS_INIT_DIR to a dedicated directory." >&2
-                exit 1
-              fi
-            done
+		for file in init.el early-init.el README.org; do
+		  target="''${init_dir}/''${file}"
+		  if [ -e "''${target}" ] && [ ! -L "''${target}" ]; then
+		    echo "Refusing to overwrite ''${target} because it is not a symlink. Set EMACS_INIT_DIR to a dedicated directory (default: ''${config_home}/emacs-jormungandr)." >&2
+		    exit 1
+		  fi
+		done
 
-            ${pkgs.coreutils}/bin/ln -sf "${configDir}/init.el" "''${init_dir}/init.el"
-            ${pkgs.coreutils}/bin/ln -sf "${configDir}/early-init.el" "''${init_dir}/early-init.el"
-            ${pkgs.coreutils}/bin/ln -sf "${configDir}/README.org" "''${init_dir}/README.org"
+		${pkgs.coreutils}/bin/ln -sf "${configDir}/init.el" "''${init_dir}/init.el"
+		${pkgs.coreutils}/bin/ln -sf "${configDir}/early-init.el" "''${init_dir}/early-init.el"
+		${pkgs.coreutils}/bin/ln -sf "${configDir}/README.org" "''${init_dir}/README.org"
 
-            exec "${emacsWithDeps}/bin/emacs" --init-directory "''${init_dir}" "''${@}"
-          EOF
+		exec "${emacsWithDeps}/bin/emacs" --init-directory "''${init_dir}" "''${@}"
+EOF
           chmod +x "$out/bin/emacs"
         '';
       };
