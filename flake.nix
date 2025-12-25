@@ -160,9 +160,13 @@
         }
       ];
 
+      extraRuntimePackages = builtins.filter (pkg: pkg != null) [
+        (pkgs.emacs-lsp-booster or null)
+      ];
+
       packaged = pkgs.symlinkJoin {
         name = "emacs";
-        paths = [emacsWithDeps];
+        paths = [emacsWithDeps] ++ extraRuntimePackages;
         postBuild = ''
           rm -f "$out/bin/emacs"
           cat >"$out/bin/emacs" <<-'EOF'
@@ -185,6 +189,10 @@
 		${pkgs.coreutils}/bin/ln -sf "${configDir}/init.el" "''${init_dir}/init.el"
 		${pkgs.coreutils}/bin/ln -sf "${configDir}/early-init.el" "''${init_dir}/early-init.el"
 		${pkgs.coreutils}/bin/ln -sf "${configDir}/README.org" "''${init_dir}/README.org"
+
+		${pkgs.lib.optionalString (extraRuntimePackages != []) ''
+		export PATH="${pkgs.lib.makeBinPath extraRuntimePackages}:''${PATH}"
+		''}
 
 		exec "${emacsWithDeps}/bin/emacs" --init-directory "''${init_dir}" "''${@}"
 EOF
