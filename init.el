@@ -250,8 +250,8 @@
 
 (use-package evil 
   :ensure t
-  :hook (evil-local-mode-hook . turn-on-undo-tree-mode)
   :init
+  (setq evil-undo-system 'undo-redo)
   (setq evil-respect-visual-line-mode t) ;; respect visual lines
 
   (setq evil-search-module 'isearch) ;; use emacs' built-in search functionality.
@@ -266,8 +266,6 @@
   (setq evil-vsplit-window-right t) ;; vertically split windows created to the right
 
   (setq evil-want-C-i-jump nil) ;; hopefully this will fix weird tab behaviour
-
-  (setq evil-undo-system 'undo-tree)
   :config
   (evil-mode 1))
 
