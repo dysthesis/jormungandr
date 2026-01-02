@@ -335,6 +335,9 @@
    :prefix "SPC"
    :non-normal-prefix "C-SPC"
    "gg" '(magit :wk "Magit")))
+(use-package magit-todos
+  :after magit
+  :config (magit-todos-mode 1))
 
 (use-package diff-hl
   :ensure t
