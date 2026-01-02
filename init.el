@@ -1,3 +1,4 @@
+;; Optimise the garbage collector to start up faster
 (use-package gcmh
   :config
   (gcmh-mode 1))
@@ -9,11 +10,20 @@
 (column-number-mode 1)
 (show-paren-mode 1)
 
+;; Show relative line numbers on programming modes for easier Vim motions.
 (setq display-line-numbers-type 'relative)
 (add-hook 'prog-mode-hook #'display-line-numbers-mode)
 
+;; Font configuration
 (add-to-list 'default-frame-alist `(font . "JBMono Nerd Font 9"))
 
+
+;; Use tree-sitter for
+;;
+;; - better syntax highlighting, and
+;; - syntax-aware motions.
+;;
+;; TODO: Evil treesitter keybindings
 (use-package tree-sitter
   :ensure t
   :hook
@@ -64,11 +74,11 @@
   :init
   (global-corfu-mode))
 
-
-(use-package nerd-icons-corfu
+(use-package nerd-icons-corfu ;; Iconise completion menu
   :ensure t
   :after corfu
   :init (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
+
 (use-package cape
   :ensure t
   :after corfu
@@ -102,8 +112,7 @@
   :hook
   (marginalia-mode-hook . nerd-icons-completion-marginalia-setup))
 
-;; Configure Tempel
-(use-package tempel
+(use-package tempel ;; Coding template engine
   :ensure t
   ;; Require trigger prefix before template name when completing.
   ;; :custom
@@ -139,20 +148,18 @@
   ;; (global-tempel-abbrev-mode)
   )
 
-;; Optional: Add tempel-collection.
-;; The package is young and doesn't have comprehensive coverage.
-(use-package tempel-collection
+(use-package tempel-collection ;; A small collection of templates for tempel
   :ensure t
   :after tempel)
 
-(use-package vertico
+(use-package vertico ;; Better menu completion
   :ensure t
   :init
   (vertico-mode))
 
 (savehist-mode) ;; Enables save history mode
 
-(use-package vertico-posframe
+(use-package vertico-posframe ;; Centre vertico on the window
   :ensure t
   :after vertico
   :config
@@ -164,6 +171,7 @@
   :after vertico
   :init
   (marginalia-mode))
+
 (use-package orderless
   :ensure t
   :custom
@@ -259,7 +267,7 @@
 
   (setq evil-want-C-i-jump nil) ;; hopefully this will fix weird tab behaviour
 
-  (setq evil-undo-system 'undo-fu) ;; use undo-fu for a more predictable undo tree
+  (setq evil-undo-system 'undo-tree)
   :config
   (evil-mode 1))
 
@@ -490,3 +498,13 @@ Respects `diff-hl-disable-on-remote'."
   :demand t
   :config
   (global-org-modern-mode 1))
+
+(use-package olivetti
+  :ensure t
+  :config
+  (defun dysthesis/org-mode-setup ()
+    (org-indent-mode)
+    (olivetti-mode)
+    (display-line-numbers-mode 0)
+    (olivetti-set-width 90))
+  (add-hook 'org-mode-hook 'dysthesis/org-mode-setup)) 
