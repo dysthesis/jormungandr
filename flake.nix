@@ -147,14 +147,6 @@
 
       configDir = pkgs.linkFarm "emacs-config" [
         {
-          name = "README.org";
-          path = ./README.org;
-        }
-        {
-          name = "early-init.el";
-          path = ./early-init.el;
-        }
-        {
           name = "init.el";
           path = ./init.el;
         }
