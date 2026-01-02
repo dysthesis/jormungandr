@@ -15,7 +15,23 @@
 (add-hook 'prog-mode-hook #'display-line-numbers-mode)
 
 ;; Font configuration
-(add-to-list 'default-frame-alist `(font . "JBMono Nerd Font 9"))
+(defun dysthesis/configure-font (&optional frame)
+  "Configure font given initial non-daemon FRAME. Intended for `after-make-frame-functions'."
+  (let ((my-font-height (if (string= (system-name) "deimos") 90 70))
+	(my-font-size   (if (string= (system-name) "deimos") 9 7)))
+    (set-face-attribute 'default nil :font "JBMono Nerd Font" :height my-font-height)
+    (set-fontset-font t nil (font-spec :size my-font-size :name "JBMono Nerd Font"))
+    (setq-default line-spacing 0.2)
+    (custom-theme-set-faces
+     'user
+     `(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height ,my-font-height))))
+     `(fixed-pitch ((t (:family "JBMono Nerd Font" :height ,my-font-height))))))
+  (add-to-list 'face-font-rescale-alist '("Atkinson Hyperlegible Next" . 1.16)) 
+  (remove-hook 'after-make-frame-functions #'dysthesis/configure-font))
+
+(add-hook 'after-make-frame-functions #'dysthesis/configure-font)
+(unless (daemonp)
+  (dysthesis/configure-font (selected-frame)))
 
 ;; Use tree-sitter for
 ;;
@@ -44,6 +60,14 @@
    :non-normal-prefix "C-SPC"
    "." '(find-file :wk "Find file")
    "TAB" '(comment-line :wk "Comment lines")))
+
+(use-package project
+  :config
+  (general-define-key
+   :states '(normal visual emacs)
+   :prefix "SPC"
+   :non-normal-prefix "C-SPC"
+   "p" project-prefix-map))
 
 (use-package corfu ;; Automatic completions
   ;; Optional customizations
@@ -232,20 +256,6 @@
   ;; consult--source-recent-file consult--source-project-recent-file
   ;; :preview-key "M-."
   ;; :preview-key '(:debounce 0.4 any))
-
-  ;; By default `consult-project-function' uses `project-root' from project.el.
-  ;; Optionally configure a different project root function.
-     ;;;; 1. project.el (the default)
-  ;; (setq consult-project-function #'consult--default-project--function)
-     ;;;; 2. vc.el (vc-root-dir)
-  ;; (setq consult-project-function (lambda (_) (vc-root-dir)))
-     ;;;; 3. locate-dominating-file
-  ;; (setq consult-project-function (lambda (_) (locate-dominating-file "." ".git")))
-     ;;;; 4. projectile.el (projectile-project-root)
-  (autoload 'projectile-project-root "projectile")
-  (setq consult-project-function (lambda (_) (projectile-project-root)))
-  ;;;; 5. No project support
-  ;; (setq consult-project-function nil)
   )
 
 (use-package evil 
@@ -581,3 +591,10 @@ Respects `diff-hl-disable-on-remote'."
 ")
   :config
   (dashboard-setup-startup-hook))
+(use-package which-key
+  :ensure t
+  :diminish which-key-mode
+  :custom
+  (which-key-idle-delay 0.3)
+  :config
+  (which-key-mode 1))
