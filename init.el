@@ -492,12 +492,12 @@ Respects `diff-hl-disable-on-remote'."
 
   (global-diff-hl-mode 1))
 
-(use-package org-modern
+(use-package org-modern ;; prettier org-mode display
   :demand t
   :config
   (global-org-modern-mode 1))
 
-(use-package olivetti
+(use-package olivetti ;; centre org-mode text to make it more readable
   :ensure t
   :config
   (defun dysthesis/org-mode-setup ()
@@ -506,3 +506,48 @@ Respects `diff-hl-disable-on-remote'."
     (display-line-numbers-mode 0)
     (olivetti-set-width 90))
   (add-hook 'org-mode-hook 'dysthesis/org-mode-setup)) 
+
+(use-package envrc ;; load per-project environments with direnv
+  :ensure t
+  :hook (prog-mode . envrc-mode))
+
+
+(use-package rust-mode
+  :ensure t
+  :mode "\\.rs\\'"
+  :custom
+  (rust-format-on-save t)
+  (treesit-language-available-p 'rust)
+  ;; (rust-mode-treesitter-derive t)
+  :hook
+  (rust-mode . eglot-ensure)
+  (rust-mode . eldoc-mode)
+  (rust-mode . (lambda () (setq indent-tabs-mode nil)))
+  ;; prettify symbols
+  (rust-mode . (lambda () (prettify-symbols-mode))))
+  (use-package cargo
+    :ensure t)
+
+(use-package nix-mode
+  :ensure t
+  :mode "\\.nix\\'"
+  :hook (nix-mode . eglot-ensure))
+
+(use-package zig-mode
+  :ensure t
+  :after eglot
+  :custom (zig-format-on-save 1)
+  :hook
+  (zig-mode . eglot-ensure)
+  :config
+  (add-to-list 'eglot-server-programs
+	       '(zig-mode . ((executable-find "zls")
+ 			     :initializationOptions
+			     (:zig_exe_path (executable-find "zig")))))
+  (if (>= emacs-major-version 28)
+      (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
+    (progn
+      (defun colorize-compilation-buffer ()
+     	(let ((inhibit-read-only t))
+   	  (ansi-color-apply-on-region compilation-filter-start (point))))
+      (add-hook 'compilation-filter-hook 'colorize-compilation-buffer))))
