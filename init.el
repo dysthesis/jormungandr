@@ -17,7 +17,6 @@
 ;; Font configuration
 (add-to-list 'default-frame-alist `(font . "JBMono Nerd Font 9"))
 
-
 ;; Use tree-sitter for
 ;;
 ;; - better syntax highlighting, and
@@ -251,6 +250,7 @@
 
 (use-package evil 
   :ensure t
+  :hook (evil-local-mode-hook . turn-on-undo-tree-mode)
   :init
   (setq evil-respect-visual-line-mode t) ;; respect visual lines
 
