@@ -1,3 +1,5 @@
+;;; init.el -*- lexical-binding: t; -*-
+
 ;; Optimise the garbage collector to start up faster
 (use-package gcmh
   :config
@@ -17,15 +19,15 @@
 ;; Font configuration
 (defun dysthesis/configure-font (&optional frame)
   "Configure font given initial non-daemon FRAME. Intended for `after-make-frame-functions'."
-  (let ((my-font-height (if (string= (system-name) "deimos") 90 70))
-	(my-font-size   (if (string= (system-name) "deimos") 9 7)))
-    (set-face-attribute 'default nil :font "JBMono Nerd Font" :height my-font-height)
-    (set-fontset-font t nil (font-spec :size my-font-size :name "JBMono Nerd Font"))
+  (let ((dysthesis/font-height (if (string= (system-name) "deimos") 90 70))
+	(dysthesis/font-size   (if (string= (system-name) "deimos") 9 7)))
+    (set-face-attribute 'default nil :font "JBMono Nerd Font" :height dysthesis/font-height)
+    (set-fontset-font t nil (font-spec :size dysthesis/font-size :name "JBMono Nerd Font"))
     (setq-default line-spacing 0.2)
     (custom-theme-set-faces
      'user
-     `(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height ,my-font-height))))
-     `(fixed-pitch ((t (:family "JBMono Nerd Font" :height ,my-font-height))))))
+     `(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height ,dysthesis/font-height))))
+     `(fixed-pitch ((t (:family "JBMono Nerd Font" :height ,dysthesis/font-height))))))
   (add-to-list 'face-font-rescale-alist '("Atkinson Hyperlegible Next" . 1.16)) 
   (remove-hook 'after-make-frame-functions #'dysthesis/configure-font))
 
@@ -598,3 +600,21 @@ Respects `diff-hl-disable-on-remote'."
   (which-key-idle-delay 0.3)
   :config
   (which-key-mode 1))
+
+(use-package ligature
+  :config
+  (ligature-set-ligatures 'prog-mode '("--" "---" "==" "===" "!=" "!==" "=!="
+                              "=:=" "=/=" "<=" ">=" "&&" "&&&" "&=" "++" "+++" "***" ";;" "!!"
+                              "??" "???" "?:" "?." "?=" "<:" ":<" ":>" ">:" "<:<" "<>" "<<<" ">>>"
+                              "<<" ">>" "||" "-|" "_|_" "|-" "||-" "|=" "||=" "##" "###" "####"
+                              "#{" "#[" "]#" "#(" "#?" "#_" "#_(" "#:" "#!" "#=" "^=" "<$>" "<$"
+                              "$>" "<+>" "<+" "+>" "<*>" "<*" "*>" "</" "</>" "/>" "<!--" "<#--"
+                              "-->" "->" "->>" "<<-" "<-" "<=<" "=<<" "<<=" "<==" "<=>" "<==>"
+                              "==>" "=>" "=>>" ">=>" ">>=" ">>-" ">-" "-<" "-<<" ">->" "<-<" "<-|"
+                              "<=|" "|=>" "|->" "<->" "<~~" "<~" "<~>" "~~" "~~>" "~>" "~-" "-~"
+                              "~@" "[||]" "|]" "[|" "|}" "{|" "[<" ">]" "|>" "<|" "||>" "<||"
+                              "|||>" "<|||" "<|>" "..." ".." ".=" "..<" ".?" "::" ":::" ":=" "::="
+                              ":?" ":?>" "//" "///" "/*" "*/" "/=" "//=" "/==" "@_" "__" "???"
+                              "<:<" ";;;"))
+  (global-ligature-mode t))
+
