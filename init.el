@@ -306,7 +306,7 @@
   (doom-themes-enable-bold t)   ; if nil, bold is universally disabled
   (doom-themes-enable-italic t) ; if nil, italics is universally disabled
   :config
-  (load-theme 'doom-lackluster t)
+  (load-theme 'lackluster t)
 
   ;; Enable flashing mode-line on errors
   (doom-themes-visual-bell-config)
