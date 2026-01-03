@@ -68,7 +68,7 @@ There are three styles to select from:
    (grey       base3)
 
    (red          '("#D70000" "#CC3333"   "red"))
-   (green        '("#789978" "#789978"   "green"))
+   (green        '("#729172" "#729172"   "green"))
    (yellow       '("#FFAA88" "#FFAA88"   "yellow"))
    (dark-blue    '("#7788AA" "#7788AA"   "blue"))
    (magenta      '("#CC8BC9" "#CC8BC9"   "magenta"))
