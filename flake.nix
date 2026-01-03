@@ -139,6 +139,15 @@
           '';
           in [
             epkgs.use-package
+            (epkgs.treesit-grammars.with-grammars (p: with p; [
+              tree-sitter-nix
+              tree-sitter-rust
+              tree-sitter-zig
+              tree-sitter-json
+              tree-sitter-yaml
+              tree-sitter-python
+              tree-sitter-markdown
+            ]))
             orgModernIndent
             lean4Mode
             localThemes

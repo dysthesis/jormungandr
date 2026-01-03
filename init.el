@@ -35,18 +35,10 @@
 (unless (daemonp)
   (dysthesis/configure-font (selected-frame)))
 
-;; Use tree-sitter for
-;;
-;; - better syntax highlighting, and
-;; - syntax-aware motions.
-;;
-;; TODO: Evil treesitter keybindings
-(use-package tree-sitter
-  :ensure t
-  :hook
-  (prog-mode . global-tree-sitter-mode))
-(use-package tree-sitter-langs
-  :ensure t)
+(use-package eglot-booster
+  :after eglot
+  :config
+  (eglot-booster-mode))
 
 (use-package general ;; Abstractions to neatly define keybindings
   :demand t
@@ -530,6 +522,8 @@ Respects `diff-hl-disable-on-remote'."
 (use-package rust-mode
   :ensure t
   :mode "\\.rs\\'"
+  :init
+  (setq rust-mode-treesitter-derive t)
   :custom
   (rust-format-on-save t)
   (treesit-language-available-p 'rust)
@@ -540,8 +534,15 @@ Respects `diff-hl-disable-on-remote'."
   (rust-mode . (lambda () (setq indent-tabs-mode nil)))
   ;; prettify symbols
   (rust-mode . (lambda () (prettify-symbols-mode))))
-  (use-package cargo
-    :ensure t)
+
+(use-package rustic
+  :ensure t
+  :after (rust-mode)
+  :config (setq rustic-format-on-save nil)
+  :custom (rustic-cargo-use-last-stored-arguments t))
+
+(use-package cargo
+  :ensure t)
 
 (use-package nix-mode
   :ensure t
@@ -617,4 +618,3 @@ Respects `diff-hl-disable-on-remote'."
                               ":?" ":?>" "//" "///" "/*" "*/" "/=" "//=" "/==" "@_" "__" "???"
                               "<:<" ";;;"))
   (global-ligature-mode t))
-
