@@ -248,6 +248,7 @@
           deadnix
           alejandra
           nixd
+          codex
         ];
       };
     });

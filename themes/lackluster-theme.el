@@ -16,8 +16,33 @@
   :type 'boolean
   :group 'lackluster-theme)
 
+(defcustom lackluster-theme-bold-names t
+  "Bolden names (functions, variables, types)."
+  :type 'boolean
+  :group 'lackluster-theme)
+
+(defcustom lackluster-theme-highlight-names nil
+  "Deprecated: kept for compatibility. Name backgrounds are no longer used."
+  :type 'boolean
+  :group 'lackluster-theme)
+
 (defcustom lackluster-theme-use-background-accents t
   "Use subtle background blocks for selection, search, and definitions."
+  :type 'boolean
+  :group 'lackluster-theme)
+
+(defcustom lackluster-theme-highlight-comments t
+  "Give comments a tinted background block."
+  :type 'boolean
+  :group 'lackluster-theme)
+
+(defcustom lackluster-theme-highlight-strings nil
+  "Deprecated toggle; strings keep only their foreground color (no background)."
+  :type 'boolean
+  :group 'lackluster-theme)
+
+(defcustom lackluster-theme-highlight-docstrings t
+  "Highlight docstrings (where modes expose them separately)."
   :type 'boolean
   :group 'lackluster-theme)
 
@@ -57,7 +82,11 @@
        (fg-string green)      ; literals
        (fg-const blue)        ; constants / numbers
        (fg-def luster)        ; definitions / headings
-       (fg-punct gray6))      ; punctuation muted
+       (fg-punct gray6)       ; punctuation muted
+
+       ;; Tinted backgrounds for optional highlighting
+       (bg-comment-hi "#3a340f")
+       (bg-string-hi "#173824"))
 
   (custom-theme-set-variables
    'lackluster
@@ -107,11 +136,21 @@
 
    ;; Syntax (minimal set)
    `(font-lock-comment-face
-     ((t ,(append (list :foreground fg-comment)
-                  (when lackluster-theme-bold-comments '(:weight bold))))))
+     ((t ,(let ((atts (list :foreground fg-comment)))
+            (when lackluster-theme-bold-comments
+              (setq atts (append atts '(:weight bold))))
+            (when lackluster-theme-highlight-comments
+              (setq atts (append atts (list :background bg-comment-hi))))
+            atts))))
    `(font-lock-comment-delimiter-face ((t (:inherit font-lock-comment-face))))
    `(font-lock-string-face ((t (:foreground ,fg-string))))
-   `(font-lock-doc-face ((t (:inherit font-lock-string-face))))
+   `(font-lock-doc-face
+     ((t ,(let ((atts (list :foreground fg-comment)))
+            (when lackluster-theme-bold-comments
+              (setq atts (append atts '(:weight bold))))
+            (when lackluster-theme-highlight-docstrings
+              (setq atts (append atts (list :background bg-comment-hi))))
+            atts))))
    `(font-lock-constant-face ((t (:foreground ,fg-const))))
    `(font-lock-number-face ((t (:inherit font-lock-constant-face))))
    `(font-lock-builtin-face ((t (:foreground ,fg-punct))))
@@ -119,12 +158,16 @@
    `(font-lock-operator-face ((t (:foreground ,fg-punct))))
    `(font-lock-punctuation-face ((t (:foreground ,fg-punct))))
    `(font-lock-keyword-face ((t (:foreground ,fg-main))))          ; keywords not highlighted
-   `(font-lock-variable-name-face ((t (:foreground ,fg-main))))
+   `(font-lock-variable-name-face
+     ((t ,(let ((atts (list :foreground fg-main)))
+            (when lackluster-theme-bold-names
+              (setq atts (append atts '(:weight bold))))
+            atts))))
    `(font-lock-function-name-face
-     ((t ,(append (list :foreground fg-def)
-                  (when lackluster-theme-use-background-accents
-                    (list :background bg-subtle
-                          :box (list :line-width -1 :color bg-subtle)))))))
+     ((t ,(let ((atts (list :foreground fg-def)))
+            (when lackluster-theme-bold-names
+              (setq atts (append atts '(:weight bold))))
+            atts))))
    `(font-lock-type-face ((t (:foreground ,fg-const))))           ; same hue as constants
    `(font-lock-warning-face ((t (:foreground ,red :weight bold))))
    `(font-lock-negation-char-face ((t (:foreground ,fg-punct))))
