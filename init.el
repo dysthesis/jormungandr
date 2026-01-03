@@ -64,14 +64,13 @@
    "p" project-prefix-map))
 
 (use-package corfu ;; Automatic completions
-  ;; Optional customizations
+  ;; Optional customisations
   :ensure t
+  :hook (corfu-mode . corfu-popupinfo-mode) ;; actually enable popupinfo
   :custom
-  (corfu-popupinfo-mode 1)
   (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
   (corfu-auto t)                 ;; Enable auto completion
   (corfu-auto-prefix 2)          ;; Minimum length of prefix for auto completion.
-  (corfu-popupinfo-mode t)       ;; Enable popup information
   (corfu-popupinfo-delay 0.2)    ;; Lower popupinfo delay to 0.5 seconds from 2 seconds
   (corfu-separator ?\s)          ;; Orderless field separator, Use M-SPC to enter separator
   ;; (corfu-quit-at-boundary nil)   ;; Never quit at completion boundary
@@ -85,9 +84,6 @@
   ;; `completion-at-point' is often bound to M-TAB.
   (tab-always-indent 'complete)
   (corfu-preview-current nil) ;; Don't insert completion without confirmation
-  ;; Recommended: Enable Corfu globally.  This is recommended since Dabbrev can
-  ;; be used globally (M-/).  See also the customization variable
-  ;; `global-corfu-modes' to exclude certain modes.
   :init
   (global-corfu-mode))
 
@@ -180,8 +176,12 @@
   :ensure t
   :after vertico
   :config
-  (when (display-graphic-p)
-    (vertico-posframe-mode 1)))
+  (defun dysthesis/enable-vertico-posframe (&optional frame)
+    (when (display-graphic-p frame)
+      (with-selected-frame (or frame (selected-frame))
+        (vertico-posframe-mode 1))))
+  (dysthesis/enable-vertico-posframe)
+  (add-hook 'after-make-frame-functions #'dysthesis/enable-vertico-posframe))
 
 (use-package marginalia
   :ensure t
@@ -404,9 +404,10 @@ Respects `diff-hl-disable-on-remote'."
                      (truncate (* (frame-char-height) spacing))
                    spacing)))
            (bmp-max-width (if (boundp 'diff-hl-bmp-max-width) diff-hl-bmp-max-width 16))
-           (w (min (frame-parameter nil (intern (format "%s-fringe" diff-hl-side)))
-                   bmp-max-width))
-           (_ (if (zerop w) (setq w bmp-max-width))))
+           (fringe-width (frame-parameter nil (intern (format "%s-fringe" diff-hl-side))))
+           (w (if (and (integerp fringe-width) (> fringe-width 0))
+                  (min fringe-width bmp-max-width)
+                bmp-max-width)))
 
       (define-fringe-bitmap 'diff-hl-bmp-middle
         (make-vector
@@ -475,18 +476,14 @@ Respects `diff-hl-disable-on-remote'."
   (defun dysthesis/vc-gutter-update-h (&rest _)
     (when (or (bound-and-true-p diff-hl-mode)
               (bound-and-true-p diff-hl-dir-mode))
-      (let ((file (buffer-file-name (buffer-base-buffer))))
+      (let* ((buf (or (buffer-base-buffer) (current-buffer)))
+             (file (buffer-file-name buf)))
         (when file
-          (let* ((props
-                  (when (boundp 'vc-file-prop-obarray)
-                    (copy-sequence
-                     (symbol-plist
-                      (intern (expand-file-name file)
-                              vc-file-prop-obarray)))))
-                 (state (cons (point) props)))
-            (unless (equal dysthesis/vc-gutter--last-state
-                           (setq dysthesis/vc-gutter--last-state state))
-              (ignore (diff-hl-update))))))))
+          (with-current-buffer buf
+            (let* ((state (cons (buffer-chars-modified-tick) (point))))
+              (unless (equal dysthesis/vc-gutter--last-state
+                             (setq dysthesis/vc-gutter--last-state state))
+                (ignore (diff-hl-update)))))))))
   (when (boundp 'window-selection-change-functions)
     (add-hook 'window-selection-change-functions #'dysthesis/vc-gutter-update-h t))
   (add-hook 'focus-in-hook #'dysthesis/vc-gutter-update-h t)
@@ -544,27 +541,25 @@ Respects `diff-hl-disable-on-remote'."
 (use-package rust-mode
   :ensure t
   :mode "\\.rs\\'"
-  :hook
-  ((rust-mode . (lambda ()
-		  (prettify-symbols-mode -1)
-		  (setq-local prettify-symbols-alist nil)))
-   (rust-ts-mode . (lambda ()
-                     (prettify-symbols-mode -1)
-		     (setq-local prettify-symbols-alist nil))))
   :init
-  (setq rust-mode-treesitter-derive t)
+  (setq rust-mode-treesitter-derive
+        (and (fboundp 'treesit-language-available-p)
+             (treesit-language-available-p 'rust)))
+  (defun dysthesis/rust-setup ()
+    ;; Keep Rust buffers readable and consistent across modes.
+    (prettify-symbols-mode -1)
+    (setq-local prettify-symbols-alist nil)
+    (setq indent-tabs-mode nil)
+    (eldoc-mode 1)
+    (eglot-ensure))
   :config
   (setq rust-prettify-symbols-alist nil)
   :custom
   (rust-format-on-save t)
-  (treesit-language-available-p 'rust)
   ;; (rust-mode-treesitter-derive t)
   :hook
-  (rust-mode . eglot-ensure)
-  (rust-mode . eldoc-mode)
-  (rust-mode . (lambda () (setq indent-tabs-mode nil)))
-  ;; prettify symbols
-  (rust-mode . (lambda () (prettify-symbols-mode))))
+  (rust-mode . dysthesis/rust-setup)
+  (rust-ts-mode . dysthesis/rust-setup))
 
 (use-package rustic
   :ensure t
@@ -587,10 +582,13 @@ Respects `diff-hl-disable-on-remote'."
   :hook
   (zig-mode . eglot-ensure)
   :config
-  (add-to-list 'eglot-server-programs
-	       '(zig-mode . ((executable-find "zls")
- 			     :initializationOptions
-			     (:zig_exe_path (executable-find "zig")))))
+  (let ((zls (executable-find "zls"))
+        (zig (executable-find "zig")))
+    (when zls
+      (add-to-list 'eglot-server-programs
+		   `(zig-mode . (,zls
+				 :initializationOptions
+				 (:zig_exe_path ,zig))))))
   (if (>= emacs-major-version 28)
       (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
     (progn
