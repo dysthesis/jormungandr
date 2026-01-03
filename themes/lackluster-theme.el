@@ -21,6 +21,11 @@
   :type 'boolean
   :group 'lackluster-theme)
 
+(defcustom lackluster-theme-underline-names t
+  "Underline names (functions, variables, types) for extra emphasis."
+  :type 'boolean
+  :group 'lackluster-theme)
+
 (defcustom lackluster-theme-highlight-names nil
   "Deprecated: kept for compatibility. Name backgrounds are no longer used."
   :type 'boolean
@@ -162,11 +167,15 @@
      ((t ,(let ((atts (list :foreground fg-main)))
             (when lackluster-theme-bold-names
               (setq atts (append atts '(:weight bold))))
+            (when lackluster-theme-underline-names
+              (setq atts (append atts '(:underline t))))
             atts))))
    `(font-lock-function-name-face
      ((t ,(let ((atts (list :foreground fg-def)))
             (when lackluster-theme-bold-names
               (setq atts (append atts '(:weight bold))))
+            (when lackluster-theme-underline-names
+              (setq atts (append atts '(:underline t))))
             atts))))
    `(font-lock-type-face ((t (:foreground ,fg-const))))           ; same hue as constants
    `(font-lock-warning-face ((t (:foreground ,red :weight bold))))
