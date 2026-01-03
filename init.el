@@ -339,9 +339,19 @@
    :prefix "SPC"
    :non-normal-prefix "C-SPC"
    "gg" '(magit :wk "Magit")))
+
 (use-package magit-todos
   :after magit
   :config (magit-todos-mode 1))
+
+(use-package jj-mode
+  :after magit
+  :config
+  (general-define-key
+   :states '(normal visual emacs)
+   :prefix "SPC"
+   :non-normal-prefix "C-SPC"
+   "gj" '(jj-log :wk "Jujutsu")))
 
 (use-package diff-hl
   :ensure t
@@ -522,8 +532,17 @@ Respects `diff-hl-disable-on-remote'."
 (use-package rust-mode
   :ensure t
   :mode "\\.rs\\'"
+  :hook
+  ((rust-mode . (lambda ()
+		  (prettify-symbols-mode -1)
+		  (setq-local prettify-symbols-alist nil)))
+   (rust-ts-mode . (lambda ()
+                     (prettify-symbols-mode -1)
+		     (setq-local prettify-symbols-alist nil))))
   :init
   (setq rust-mode-treesitter-derive t)
+  :config
+  (setq rust-prettify-symbols-alist nil)
   :custom
   (rust-format-on-save t)
   (treesit-language-available-p 'rust)

@@ -55,6 +55,20 @@
         package = emacsBase;
         alwaysEnsure = true;
         extraEmacsPackages = epkgs: let
+          jjMode = epkgs.trivialBuild rec {
+            pname = "jj-mode";
+            version = "98fdb5ce9f9955e3abfde5af58c76de0366bfbea";
+            src = pkgs.fetchFromGitHub {
+              owner = "bolivier";
+              repo = "jj-mode.el";
+              rev = version;
+              hash = "sha256-ykertZd0r7PiWYAWHWE2lthGTh7ihO653jU6Tr4Cav4=";
+            };
+            packageRequires = with epkgs; [
+              magit
+              transient
+            ];
+          };
           orgModernIndent = epkgs.trivialBuild {
               pname = "org-modern-indent";
               version = "0.5.1";
@@ -150,6 +164,7 @@
             ]))
             orgModernIndent
             lean4Mode
+            jjMode
             localThemes
           ];
         };
