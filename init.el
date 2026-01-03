@@ -1,14 +1,10 @@
 ;;; init.el -*- lexical-binding: t; -*-
 
-;; Optimise the garbage collector to start up faster
+;; Optimise the garbage collector
 (use-package gcmh
   :config
   (gcmh-mode 1))
 
-;; Get rid of WYSIWYG elements
-(tool-bar-mode 0)
-(menu-bar-mode 0)
-(scroll-bar-mode 0)
 (column-number-mode 1)
 (show-paren-mode 1)
 

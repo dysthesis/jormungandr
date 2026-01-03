@@ -39,7 +39,11 @@
         len = builtins.stringLength preprocessed;
         bytes = builtins.genList (i: builtins.substring i 1 preprocessed) len;
         asciiBytes = builtins.map (b:
-          if (builtins.match "[ -~]" b != null) || (b == "\n") || (b == "\t") || (b == "\r")
+          if
+            (builtins.match "[ -~]" b != null)
+            || (b == "\n")
+            || (b == "\t")
+            || (b == "\r")
           then b
           else " ")
         bytes;
@@ -70,60 +74,60 @@
             ];
           };
           orgModernIndent = epkgs.trivialBuild {
-              pname = "org-modern-indent";
-              version = "0.5.1";
-              src = pkgs.fetchFromGitHub {
-                owner = "jdtsmith";
-                repo = "org-modern-indent";
-                rev = "v0.5.1";
-                hash = "sha256-st3338Jk9kZ5BLEPRJZhjqdncMpLoWNwp60ZwKEObyU=";
-              };
-              packageRequires = [
-                epkgs.compat
-                epkgs.org
-              ];
-              nativeBuildInputs = [
-                epkgs.compat
-                epkgs.org
-              ];
+            pname = "org-modern-indent";
+            version = "0.5.1";
+            src = pkgs.fetchFromGitHub {
+              owner = "jdtsmith";
+              repo = "org-modern-indent";
+              rev = "v0.5.1";
+              hash = "sha256-st3338Jk9kZ5BLEPRJZhjqdncMpLoWNwp60ZwKEObyU=";
             };
+            packageRequires = [
+              epkgs.compat
+              epkgs.org
+            ];
+            nativeBuildInputs = [
+              epkgs.compat
+              epkgs.org
+            ];
+          };
 
-            lean4Mode = epkgs.trivialBuild {
-              pname = "lean4-mode";
-              version = "1.1.2";
-              src = pkgs.fetchFromGitHub {
-                owner = "leanprover-community";
-                repo = "lean4-mode";
-                rev = "1388f9d1429e38a39ab913c6daae55f6ce799479";
-                hash = "sha256-6XFcyqSTx1CwNWqQvIc25cuQMwh3YXnbgr5cDiOCxBk=";
-              };
-              packageRequires = [
-                epkgs.compat
-                epkgs.dash
-                epkgs.magit-section
-                epkgs.lsp-mode
-              ];
-              nativeBuildInputs = [
-                epkgs.compat
-                epkgs.dash
-                epkgs.magit-section
-                epkgs.lsp-mode
-              ];
-              installPhase = ''
-                runHook preInstall
-
-                LISPDIR=$out/share/emacs/site-lisp
-                install -d "$LISPDIR"
-                install *.el *.elc "$LISPDIR"
-                if [ -d data ]; then
-                  cp -r data "$LISPDIR/"
-                fi
-
-                runHook postInstall
-              '';
+          lean4Mode = epkgs.trivialBuild {
+            pname = "lean4-mode";
+            version = "1.1.2";
+            src = pkgs.fetchFromGitHub {
+              owner = "leanprover-community";
+              repo = "lean4-mode";
+              rev = "1388f9d1429e38a39ab913c6daae55f6ce799479";
+              hash = "sha256-6XFcyqSTx1CwNWqQvIc25cuQMwh3YXnbgr5cDiOCxBk=";
             };
+            packageRequires = [
+              epkgs.compat
+              epkgs.dash
+              epkgs.magit-section
+              epkgs.lsp-mode
+            ];
+            nativeBuildInputs = [
+              epkgs.compat
+              epkgs.dash
+              epkgs.magit-section
+              epkgs.lsp-mode
+            ];
+            installPhase = ''
+              runHook preInstall
 
-            localThemes = pkgs.runCommand "emacs-jormungandr-themes-0.0.0" {} ''
+              LISPDIR=$out/share/emacs/site-lisp
+              install -d "$LISPDIR"
+              install *.el *.elc "$LISPDIR"
+              if [ -d data ]; then
+                cp -r data "$LISPDIR/"
+              fi
+
+              runHook postInstall
+            '';
+          };
+
+          localThemes = pkgs.runCommand "emacs-jormungandr-themes-0.0.0" {} ''
             pkgdir="$out/share/emacs/site-lisp/elpa/jormungandr-themes-0.0.0"
             mkdir -p "$pkgdir"
 
@@ -151,9 +155,10 @@
             ;;; jormungandr-themes-autoloads.el ends here
             EOF
           '';
-          in [
-            epkgs.use-package
-            (epkgs.treesit-grammars.with-grammars (p: with p; [
+        in [
+          epkgs.use-package
+          (epkgs.treesit-grammars.with-grammars (p:
+            with p; [
               tree-sitter-nix
               tree-sitter-rust
               tree-sitter-zig
@@ -162,17 +167,21 @@
               tree-sitter-python
               tree-sitter-markdown
             ]))
-            orgModernIndent
-            lean4Mode
-            jjMode
-            localThemes
-          ];
-        };
+          orgModernIndent
+          lean4Mode
+          jjMode
+          localThemes
+        ];
+      };
 
       configDir = pkgs.linkFarm "emacs-config" [
         {
           name = "init.el";
           path = ./init.el;
+        }
+        {
+          name = "early-init.el";
+          path = ./early-init.el;
         }
       ];
 
@@ -184,35 +193,35 @@
         name = "emacs";
         paths = [emacsWithDeps] ++ extraRuntimePackages;
         postBuild = ''
-          rm -f "$out/bin/emacs"
-          cat >"$out/bin/emacs" <<-'EOF'
-		#!${pkgs.bash}/bin/bash
-		set -euo pipefail
+                    rm -f "$out/bin/emacs"
+                    cat >"$out/bin/emacs" <<-'EOF'
+          		#!${pkgs.bash}/bin/bash
+          		set -euo pipefail
 
-		config_home="''${XDG_CONFIG_HOME:-''${HOME}/.config}"
-		init_dir="''${EMACS_INIT_DIR:-''${config_home}/emacs-jormungandr}"
+          		config_home="''${XDG_CONFIG_HOME:-''${HOME}/.config}"
+          		init_dir="''${EMACS_INIT_DIR:-''${config_home}/emacs-jormungandr}"
 
-		${pkgs.coreutils}/bin/mkdir -p "''${init_dir}"
+          		${pkgs.coreutils}/bin/mkdir -p "''${init_dir}"
 
-		for file in init.el early-init.el README.org; do
-		  target="''${init_dir}/''${file}"
-		  if [ -e "''${target}" ] && [ ! -L "''${target}" ]; then
-		    echo "Refusing to overwrite ''${target} because it is not a symlink. Set EMACS_INIT_DIR to a dedicated directory (default: ''${config_home}/emacs-jormungandr)." >&2
-		    exit 1
-		  fi
-		done
+          		for file in init.el early-init.el README.org; do
+          		  target="''${init_dir}/''${file}"
+          		  if [ -e "''${target}" ] && [ ! -L "''${target}" ]; then
+          		    echo "Refusing to overwrite ''${target} because it is not a symlink. Set EMACS_INIT_DIR to a dedicated directory (default: ''${config_home}/emacs-jormungandr)." >&2
+          		    exit 1
+          		  fi
+          		done
 
-		${pkgs.coreutils}/bin/ln -sf "${configDir}/init.el" "''${init_dir}/init.el"
-		${pkgs.coreutils}/bin/ln -sf "${configDir}/early-init.el" "''${init_dir}/early-init.el"
-		${pkgs.coreutils}/bin/ln -sf "${configDir}/README.org" "''${init_dir}/README.org"
+          		${pkgs.coreutils}/bin/ln -sf "${configDir}/init.el" "''${init_dir}/init.el"
+          		${pkgs.coreutils}/bin/ln -sf "${configDir}/early-init.el" "''${init_dir}/early-init.el"
+          		${pkgs.coreutils}/bin/ln -sf "${configDir}/README.org" "''${init_dir}/README.org"
 
-		${pkgs.lib.optionalString (extraRuntimePackages != []) ''
-		export PATH="${pkgs.lib.makeBinPath extraRuntimePackages}:''${PATH}"
-		''}
+          		${pkgs.lib.optionalString (extraRuntimePackages != []) ''
+            export PATH="${pkgs.lib.makeBinPath extraRuntimePackages}:''${PATH}"
+          ''}
 
-		exec "${emacsWithDeps}/bin/emacs" --init-directory "''${init_dir}" "''${@}"
-EOF
-          chmod +x "$out/bin/emacs"
+          		exec "${emacsWithDeps}/bin/emacs" --init-directory "''${init_dir}" "''${@}"
+          EOF
+                    chmod +x "$out/bin/emacs"
         '';
       };
     in {
