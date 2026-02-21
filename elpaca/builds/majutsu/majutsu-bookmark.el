@@ -1,0 +1,1 @@
+/home/demiurge/.config/emacs/elpaca/repos/majutsu/majutsu-bookmark.el

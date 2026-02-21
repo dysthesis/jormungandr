@@ -1,0 +1,1 @@
+/home/demiurge/.config/emacs/elpaca/repos/emacs-solaire-mode/solaire-mode.el
