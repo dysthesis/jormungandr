@@ -5,3 +5,5 @@ elpa/
 emacs-backup/
 eln-cache/
 auto-save-list/
+elpaca/
+.org-id-locations

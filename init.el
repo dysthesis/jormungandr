@@ -1,3 +1,46 @@
+(defvar elpaca-installer-version 0.11)
+(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+(defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
+(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+                              :ref nil :depth 1 :inherit ignore
+                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+                              :build (:not elpaca--activate-package)))
+(let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
+       (build (expand-file-name "elpaca/" elpaca-builds-directory))
+       (order (cdr elpaca-order))
+       (default-directory repo))
+  (add-to-list 'load-path (if (file-exists-p build) build repo))
+  (unless (file-exists-p repo)
+    (make-directory repo t)
+    (when (<= emacs-major-version 28) (require 'subr-x))
+    (condition-case-unless-debug err
+        (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+                  ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+                                                  ,@(when-let* ((depth (plist-get order :depth)))
+                                                      (list (format "--depth=%d" depth) "--no-single-branch"))
+                                                  ,(plist-get order :repo) ,repo))))
+                  ((zerop (call-process "git" nil buffer t "checkout"
+                                        (or (plist-get order :ref) "--"))))
+                  (emacs (concat invocation-directory invocation-name))
+                  ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+                                        "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+                  ((require 'elpaca))
+                  ((elpaca-generate-autoloads "elpaca" repo)))
+            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+          (error "%s" (with-current-buffer buffer (buffer-string))))
+      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+  (unless (require 'elpaca-autoloads nil t)
+    (require 'elpaca)
+    (elpaca-generate-autoloads "elpaca" repo)
+    (let ((load-source-file-function nil)) (load "./elpaca-autoloads"))))
+(add-hook 'after-init-hook #'elpaca-process-queues)
+(elpaca `(,@elpaca-order))
+
+(elpaca elpaca-use-package
+  ;; Enable use-package :ensure support for Elpaca.
+  (elpaca-use-package-mode))
+
 (use-package emacs
   :demand t
   :ensure nil
@@ -394,14 +437,17 @@
 (use-package smartparens
   :ensure smartparens  ;; install the package
   :hook (prog-mode text-mode markdown-mode) ;; add `smartparens-mode` to these hooks
-  :general
-  ("M-h" 'sp-backward-slurp-sexp)
-  ("M-l" 'sp-forward-slurp-sexp)
-  ("M-H" 'sp-backward-barf-sexp)
-  ("M-L" 'sp-forward-barf-sexp)
-  ("M-r" '(sp-rewrap-sexp :wk "Change wrapping parentheses"))
-  ("C-M-t" 'sp-transpose-sexp)
+  ;; ("M-h" 'sp-backward-slurp-sexp)
+  ;; ("M-l" 'sp-forward-slurp-sexp)
+  ;; ("M-H" 'sp-backward-barf-sexp)
+  ;; ("M-L" 'sp-forward-barf-sexp)
+  ;; ("M-r" '(sp-rewrap-sexp :wk "Change wrapping parentheses"))
+  ;; ("C-M-t" 'sp-transpose-sexp)
   :config
+  ;; Define keybindings with general.el
+  (general-define-key
+   :states 'insert
+   "M-h" 'sp-backward-slurp-sexp)
   ;; load default config
   (require 'smartparens-config))
 
@@ -411,13 +457,82 @@
 (use-package magit
   :ensure t
   :after (transient)
-  :general ("C-x g" 'magit))
+  :config
+  (dysthesis/start/leader-keys
+    "g g" '(magit :wk "Magit")))
 
 (use-package majutsu
-  :vc (:url "https://github.com/0WD0/majutsu"))
+  :ensure (:host github :repo "0WD0/majutsu")
+  :config
+  (dysthesis/start/leader-keys
+  "g j" '(majutsu :wk "Majutsu")))
 
 (load-theme 'modus-vivendi)
 (use-package solaire-mode
  :ensure t
  :config
  (solaire-global-mode +1))
+
+(use-package olivetti
+  :ensure t
+  :config
+  (defun dysthesis/org-mode-setup ()
+    (org-indent-mode)
+    (olivetti-mode)
+    (display-line-numbers-mode 0)
+    (olivetti-set-width 90))
+  (add-hook 'org-mode-hook 'dysthesis/org-mode-setup))
+
+(use-package mixed-pitch
+  :ensure t
+  :hook
+  ;; You might want to enable it only in org-mode or both text-mode and org-mode
+  ((org-mode) . mixed-pitch-mode)
+  ((markdown-mode) . mixed-pitch-mode)
+  :config
+  (setq mixed-pitch-face 'variable-pitch)
+  (setq mixed-pitch-fixed-pitch-faces
+        (append mixed-pitch-fixed-pitch-faces
+                '(org-table
+                  org-code
+                  org-property-value
+                  org-block
+                  org-block-begin-line
+                  org-block-end-line
+                  org-meta-line
+                  org-document-info-keyword
+                  org-tag
+                  org-time-grid
+                  org-todo
+                  org-done
+                  org-agenda-date
+                  org-date
+                  org-drawer
+                  org-modern-tag
+                  org-modern-done
+                  org-modern-label
+                  org-scheduled
+                  org-scheduled-today
+                  neo-file-link-face
+                  org-scheduled-previously))))
+
+(use-package org
+  :after (olivetti))
+
+(use-package org-modern
+  :ensure t
+  :demand t
+  :after (org)
+  :config
+  (set-face-background 'fringe (face-attribute 'default :background))
+  (setq org-auto-align-tags nil
+	org-tags-column 0
+	org-modern-star 'replace
+	org-catch-invisible-edits 'show-and-error
+	org-special-ctrl-a/e t
+	org-insert-heading-respect-content t
+	org-hide-emphasis-markers t
+	org-pretty-entities t
+	org-agenda-tags-column 0
+	org-ellipsis " ↪")
+  (global-org-modern-mode))
