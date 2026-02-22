@@ -467,7 +467,8 @@
   (dysthesis/start/leader-keys
   "g j" '(majutsu :wk "Majutsu")))
 
-(load-theme 'modus-vivendi)
+(setq custom-theme-directory "~/.config/emacs/themes/")
+(load-theme 'lackluster t)
 (use-package solaire-mode
  :ensure t
  :config
