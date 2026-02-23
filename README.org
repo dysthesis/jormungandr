@@ -89,6 +89,7 @@ We will set up and use elpaca as our package manager in our =init.el=, so we mus
 
 ** Package manager
 Install and use [[https://github.com/progfolio/elpaca][elpaca]] as our package manager. I tried using plain =package.el=, but for some reason, it always seems to slow down startup times due to fetching the repositories. Maybe I'm just doing something wrong -- I might revisit it at some point.
+
 #+begin_src emacs-lisp
   (defvar elpaca-installer-version 0.11)
   (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
@@ -133,7 +134,6 @@ Install and use [[https://github.com/progfolio/elpaca][elpaca]] as our package m
 Then, configure Elpaca to accept use-package syntax for ease of portability.
 #+begin_src emacs-lisp
 (elpaca elpaca-use-package
-  ;; Enable use-package :ensure support for Elpaca.
   (elpaca-use-package-mode))
 #+end_src
 
@@ -525,55 +525,18 @@ Provide some integrations with Consult.
 #+begin_src emacs-lisp
   (use-package consult
     :ensure t
-    ;; Enable automatic preview at point in the *Completions* buffer. This is
-    ;; relevant when you use the default completion UI.
     :hook (completion-list-mode . consult-preview-at-point-mode)
     :init
-    ;; Optionally configure the register formatting. This improves the register
-    ;; preview for `consult-register', `consult-register-load',
-    ;; `consult-register-store' and the Emacs built-ins.
     (setq register-preview-delay 0.5
           register-preview-function #'consult-register-format)
 
-    ;; Optionally tweak the register preview window.
-    ;; This adds thin lines, sorting and hides the mode line of the window.
     (advice-add #'register-preview :override #'consult-register-window)
 
-    ;; Use Consult to select xref locations with preview
     (setq xref-show-xrefs-function #'consult-xref
           xref-show-definitions-function #'consult-xref)
     :config
-    ;; Optionally configure preview. The default value
-    ;; is 'any, such that any key triggers the preview.
-    ;; (setq consult-preview-key 'any)
-    ;; (setq consult-preview-key "M-.")
-    ;; (setq consult-preview-key '("S-<down>" "S-<up>"))
-
-    ;; For some commands and buffer sources it is useful to configure the
-    ;; :preview-key on a per-command basis using the `consult-customize' macro.
-    ;; (consult-customize
-    ;; consult-theme :preview-key '(:debounce 0.2 any)
-    ;; consult-ripgrep consult-git-grep consult-grep
-    ;; consult-bookmark consult-recent-file consult-xref
-    ;; consult--source-bookmark consult--source-file-register
-    ;; consult--source-recent-file consult--source-project-recent-file
-    ;; :preview-key "M-."
-    ;; :preview-key '(:debounce 0.4 any))
-
-    ;; By default `consult-project-function' uses `project-root' from project.el.
-    ;; Optionally configure a different project root function.
-     ;;;; 1. project.el (the default)
-    ;; (setq consult-project-function #'consult--default-project--function)
-     ;;;; 2. vc.el (vc-root-dir)
-    ;; (setq consult-project-function (lambda (_) (vc-root-dir)))
-     ;;;; 3. locate-dominating-file
-    ;; (setq consult-project-function (lambda (_) (locate-dominating-file "." ".git")))
-     ;;;; 4. projectile.el (projectile-project-root)
-    (autoload 'projectile-project-root "projectile")
-    (setq consult-project-function (lambda (_) (projectile-project-root)))
-     ;;;; 5. No project support
-    ;; (setq consult-project-function nil)
-    )
+    ;; Accept VCS markers as project root markers
+    (setopt project-vc-extra-root-markers '(".projectile" ".git")))
 #+end_src
 *** Evil
 Vim modal editing on Emacs.
@@ -600,7 +563,6 @@ A collection of bindings for Evil mode
 A smaller, faster, and arguably better-designed alternative to Company for completion.
 #+begin_src emacs-lisp
   (use-package corfu
-    ;; Optional customizations
     :ensure t
     :custom
     (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
@@ -609,20 +571,11 @@ A smaller, faster, and arguably better-designed alternative to Company for compl
     (corfu-popupinfo-mode t)       ;; Enable popup information
     (corfu-popupinfo-delay 0.2)    ;; Lower popupinfo delay to 0.5 seconds from 2 seconds
     (corfu-separator ?\s)          ;; Orderless field separator, Use M-SPC to enter separator
-    ;; (corfu-quit-at-boundary nil)   ;; Never quit at completion boundary
-    ;; (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
-    ;; (corfu-preview-current nil)    ;; Disable current candidate preview
-    ;; (corfu-preselect 'prompt)      ;; Preselect the prompt
-    ;; (corfu-on-exact-match nil)     ;; Configure handling of exact matches
-    ;; (corfu-scroll-margin 5)        ;; Use scroll margin
     (completion-ignore-case t)
     ;; Enable indentation+completion using the TAB key.
     ;; `completion-at-point' is often bound to M-TAB.
     (tab-always-indent 'complete)
     (corfu-preview-current nil) ;; Don't insert completion without confirmation
-    ;; Recommended: Enable Corfu globally.  This is recommended since Dabbrev can
-    ;; be used globally (M-/).  See also the customization variable
-    ;; `global-corfu-modes' to exclude certain modes.
     :init
     (global-corfu-mode))
 #+end_src
@@ -642,10 +595,12 @@ Short for "Completion At Point Extensions".
     :ensure t
     :after corfu
     :init
-    (add-to-list 'completion-at-point-functions #'cape-file) ;; Path completion
-    (add-to-list 'completion-at-point-functions #'cape-elisp-block) ;; Complete elisp in Org or Markdown mode
-    (add-to-list 'completion-at-point-functions #'cape-keyword) ;; Keyword/Snipet completion
-    )
+    ;; Path completion
+    (add-to-list 'completion-at-point-functions #'cape-file)
+    ;; Complete elisp in Org or Markdown mode
+    (add-to-list 'completion-at-point-functions #'cape-elisp-block) 
+    ;; Keyword/Snipet completion
+    (add-to-list 'completion-at-point-functions #'cape-keyword))
 #+end_src
 
 ** Templating
@@ -718,6 +673,83 @@ Automatic delimiter pairing, navigation, and editing.
     (require 'smartparens-config))
 #+end_src
 
+** Development utilities
+*** Eglot as LSP client
+:PROPERTIES:
+:HEADER-ARGS:EMACS-LISP:  :tangle no :noweb yes
+:END:
+
+Eglot is a built-in, lightweight LSP client. It does pretty much everything I need, which is why I don't use the more heavyweight [[https://github.com/emacs-lsp/lsp-mode][lsp-mode]] instead.
+
+#+begin_src emacs-lisp :tangle init.el
+  (use-package eglot
+    :defer t
+    :ensure nil
+    :hook
+    (prog-mode . (lambda ()
+                   (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
+                     (eglot-ensure))))
+    (eglot-managed-mode . +lsp-optimization-mode)
+    :custom
+    (eglot-sync-connect 1)
+    (eglot-autoshutdown t)
+    ;; NOTE: We disable eglot-auto-display-help-buffer because :select t in
+    ;;   its popup rule causes eglot to steal focus too often.
+    (eglot-auto-display-help-buffer nil)
+    :config
+    <<eglot-keybinds>>
+    <<eglot-server-programs>>
+    <<eglot-format-on-save>>)
+#+end_src
+
+**** Keybindings
+#+name: eglot-keybinds
+#+begin_src emacs-lisp
+  (dysthesis/start/leader-keys
+   "c" '(:ignore t :which-key "Code")
+   "c <escape>" '(keyboard-escape-quit :which-key t)
+   "c r" '(eglot-rename :which-key "Rename")
+   "c a" '(eglot-code-actions :which-key "Actions"))
+#+end_src
+
+**** Language servers
+#+name: eglot-server-programs
+#+begin_src emacs-lisp
+  (with-eval-after-load 'eglot
+    (dolist (mode '((nix-mode . ("nixd"))
+                    ((rust-ts-mode rust-mode) . ("rust-analyzer"
+  					       :initializationOptions (:check (:command "clippy"))))))
+      (add-to-list 'eglot-server-programs mode)))
+#+end_src
+
+**** Format on save
+#+name: eglot-format-on-save
+#+begin_src emacs-lisp
+  (add-hook 'prog-mode-hook
+            (lambda ()
+              (add-hook 'before-save-hook 'eglot-format nil t)))
+#+end_src
+
+**** Consult integration
+#+begin_src emacs-lisp :tangle init.el
+  (use-package consult-eglot
+    :ensure t
+    :after (eglot consult)
+    :config
+    (dysthesis/start/leader-keys
+      "c s" '(consult-eglot-symbols :wk "Code Symbols")))
+#+end_src
+
+*** Direnv
+Since I use [[https://direnv.net/][direnv]] to load [[https://nixos.org][Nix]] development environments per directory, we use this package to automatically load direnv environments when switching directories.
+
+#+begin_src emacs-lisp
+  (use-package direnv
+    :ensure t
+    :config
+    (direnv-mode))
+#+end_src
+
 ** Version control
 *** Git
 **** Magit
@@ -753,8 +785,11 @@ Magit, but for Jujutsu.
 ** UI
 *** Theme
 #+begin_src emacs-lisp
-  (setq custom-theme-directory "~/.config/emacs/themes/")
-  (load-theme 'lackluster t)
+  (use-package doric-themes
+    :ensure t
+    :demand t
+    :config
+    (doric-themes-select 'doric-obsidian))
   (use-package solaire-mode
    :ensure t
    :config
@@ -841,4 +876,12 @@ As its name suggests, this package provides a more modern interface for editing 
   	org-agenda-tags-column 0
   	org-ellipsis " ↪")
     (global-org-modern-mode))
+#+end_src
+
+*** Nix
+#+begin_src emacs-lisp
+    (use-package nix-mode
+      :ensure t
+      :mode "\\.nix\\'"
+      :hook (nix-mode . eglot-ensure))
 #+end_src

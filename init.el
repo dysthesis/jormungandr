@@ -38,7 +38,6 @@
 (elpaca `(,@elpaca-order))
 
 (elpaca elpaca-use-package
-  ;; Enable use-package :ensure support for Elpaca.
   (elpaca-use-package-mode))
 
 (use-package emacs
@@ -289,55 +288,18 @@
 
 (use-package consult
   :ensure t
-  ;; Enable automatic preview at point in the *Completions* buffer. This is
-  ;; relevant when you use the default completion UI.
   :hook (completion-list-mode . consult-preview-at-point-mode)
   :init
-  ;; Optionally configure the register formatting. This improves the register
-  ;; preview for `consult-register', `consult-register-load',
-  ;; `consult-register-store' and the Emacs built-ins.
   (setq register-preview-delay 0.5
         register-preview-function #'consult-register-format)
 
-  ;; Optionally tweak the register preview window.
-  ;; This adds thin lines, sorting and hides the mode line of the window.
   (advice-add #'register-preview :override #'consult-register-window)
 
-  ;; Use Consult to select xref locations with preview
   (setq xref-show-xrefs-function #'consult-xref
         xref-show-definitions-function #'consult-xref)
   :config
-  ;; Optionally configure preview. The default value
-  ;; is 'any, such that any key triggers the preview.
-  ;; (setq consult-preview-key 'any)
-  ;; (setq consult-preview-key "M-.")
-  ;; (setq consult-preview-key '("S-<down>" "S-<up>"))
-
-  ;; For some commands and buffer sources it is useful to configure the
-  ;; :preview-key on a per-command basis using the `consult-customize' macro.
-  ;; (consult-customize
-  ;; consult-theme :preview-key '(:debounce 0.2 any)
-  ;; consult-ripgrep consult-git-grep consult-grep
-  ;; consult-bookmark consult-recent-file consult-xref
-  ;; consult--source-bookmark consult--source-file-register
-  ;; consult--source-recent-file consult--source-project-recent-file
-  ;; :preview-key "M-."
-  ;; :preview-key '(:debounce 0.4 any))
-
-  ;; By default `consult-project-function' uses `project-root' from project.el.
-  ;; Optionally configure a different project root function.
-   ;;;; 1. project.el (the default)
-  ;; (setq consult-project-function #'consult--default-project--function)
-   ;;;; 2. vc.el (vc-root-dir)
-  ;; (setq consult-project-function (lambda (_) (vc-root-dir)))
-   ;;;; 3. locate-dominating-file
-  ;; (setq consult-project-function (lambda (_) (locate-dominating-file "." ".git")))
-   ;;;; 4. projectile.el (projectile-project-root)
-  (autoload 'projectile-project-root "projectile")
-  (setq consult-project-function (lambda (_) (projectile-project-root)))
-   ;;;; 5. No project support
-  ;; (setq consult-project-function nil)
-  )
+  ;; Accept VCS markers as project root markers
+  (setopt project-vc-extra-root-markers '(".projectile" ".git")))
 
 (use-package evil
   :ensure t
@@ -354,7 +316,6 @@
   (evil-collection-init))
 
 (use-package corfu
-  ;; Optional customizations
   :ensure t
   :custom
   (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
@@ -363,20 +324,11 @@
   (corfu-popupinfo-mode t)       ;; Enable popup information
   (corfu-popupinfo-delay 0.2)    ;; Lower popupinfo delay to 0.5 seconds from 2 seconds
   (corfu-separator ?\s)          ;; Orderless field separator, Use M-SPC to enter separator
-  ;; (corfu-quit-at-boundary nil)   ;; Never quit at completion boundary
-  ;; (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
-  ;; (corfu-preview-current nil)    ;; Disable current candidate preview
-  ;; (corfu-preselect 'prompt)      ;; Preselect the prompt
-  ;; (corfu-on-exact-match nil)     ;; Configure handling of exact matches
-  ;; (corfu-scroll-margin 5)        ;; Use scroll margin
   (completion-ignore-case t)
   ;; Enable indentation+completion using the TAB key.
   ;; `completion-at-point' is often bound to M-TAB.
   (tab-always-indent 'complete)
   (corfu-preview-current nil) ;; Don't insert completion without confirmation
-  ;; Recommended: Enable Corfu globally.  This is recommended since Dabbrev can
-  ;; be used globally (M-/).  See also the customization variable
-  ;; `global-corfu-modes' to exclude certain modes.
   :init
   (global-corfu-mode))
 
@@ -389,10 +341,12 @@
   :ensure t
   :after corfu
   :init
-  (add-to-list 'completion-at-point-functions #'cape-file) ;; Path completion
-  (add-to-list 'completion-at-point-functions #'cape-elisp-block) ;; Complete elisp in Org or Markdown mode
-  (add-to-list 'completion-at-point-functions #'cape-keyword) ;; Keyword/Snipet completion
-  )
+  ;; Path completion
+  (add-to-list 'completion-at-point-functions #'cape-file)
+  ;; Complete elisp in Org or Markdown mode
+  (add-to-list 'completion-at-point-functions #'cape-elisp-block) 
+  ;; Keyword/Snipet completion
+  (add-to-list 'completion-at-point-functions #'cape-keyword))
 
 (use-package tempel
   :ensure t
@@ -451,6 +405,47 @@
   ;; load default config
   (require 'smartparens-config))
 
+(use-package eglot
+  :defer t
+  :ensure nil
+  :hook
+  (prog-mode . (lambda ()
+                 (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
+                   (eglot-ensure))))
+  (eglot-managed-mode . +lsp-optimization-mode)
+  :custom
+  (eglot-sync-connect 1)
+  (eglot-autoshutdown t)
+  ;; NOTE: We disable eglot-auto-display-help-buffer because :select t in
+  ;;   its popup rule causes eglot to steal focus too often.
+  (eglot-auto-display-help-buffer nil)
+  :config
+  (dysthesis/start/leader-keys
+   "c" '(:ignore t :which-key "Code")
+   "c <escape>" '(keyboard-escape-quit :which-key t)
+   "c r" '(eglot-rename :which-key "Rename")
+   "c a" '(eglot-code-actions :which-key "Actions"))
+  (with-eval-after-load 'eglot
+    (dolist (mode '((nix-mode . ("nixd"))
+                    ((rust-ts-mode rust-mode) . ("rust-analyzer"
+  					       :initializationOptions (:check (:command "clippy"))))))
+      (add-to-list 'eglot-server-programs mode)))
+  (add-hook 'prog-mode-hook
+            (lambda ()
+              (add-hook 'before-save-hook 'eglot-format nil t))))
+
+(use-package consult-eglot
+  :ensure t
+  :after (eglot consult)
+  :config
+  (dysthesis/start/leader-keys
+    "c s" '(consult-eglot-symbols :wk "Code Symbols")))
+
+(use-package direnv
+  :ensure t
+  :config
+  (direnv-mode))
+
 (use-package transient
   :ensure t)
 
@@ -467,8 +462,11 @@
   (dysthesis/start/leader-keys
   "g j" '(majutsu :wk "Majutsu")))
 
-(setq custom-theme-directory "~/.config/emacs/themes/")
-(load-theme 'lackluster t)
+(use-package doric-themes
+  :ensure t
+  :demand t
+  :config
+  (doric-themes-select 'doric-obsidian))
 (use-package solaire-mode
  :ensure t
  :config
@@ -537,3 +535,8 @@
 	org-agenda-tags-column 0
 	org-ellipsis " ↪")
   (global-org-modern-mode))
+
+(use-package nix-mode
+  :ensure t
+  :mode "\\.nix\\'"
+  :hook (nix-mode . eglot-ensure))
