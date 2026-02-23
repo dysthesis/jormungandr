@@ -1,1 +1,0 @@
-/home/demiurge/.config/emacs/elpaca/repos/magit/.dir-locals.el

@@ -1,1 +1,0 @@
-/home/demiurge/.config/emacs/elpaca/repos/nerd-icons/nerd-icons-faces.el

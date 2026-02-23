@@ -1,1 +1,0 @@
-/home/demiurge/.config/emacs/elpaca/repos/vertico/extensions/vertico-suspend.el

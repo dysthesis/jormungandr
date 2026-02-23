@@ -1,44 +1,27 @@
-(defvar elpaca-installer-version 0.11)
-(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
-(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
-(defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
-(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-                              :ref nil :depth 1 :inherit ignore
-                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
-                              :build (:not elpaca--activate-package)))
-(let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
-       (build (expand-file-name "elpaca/" elpaca-builds-directory))
-       (order (cdr elpaca-order))
-       (default-directory repo))
-  (add-to-list 'load-path (if (file-exists-p build) build repo))
-  (unless (file-exists-p repo)
-    (make-directory repo t)
-    (when (<= emacs-major-version 28) (require 'subr-x))
-    (condition-case-unless-debug err
-        (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
-                  ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
-                                                  ,@(when-let* ((depth (plist-get order :depth)))
-                                                      (list (format "--depth=%d" depth) "--no-single-branch"))
-                                                  ,(plist-get order :repo) ,repo))))
-                  ((zerop (call-process "git" nil buffer t "checkout"
-                                        (or (plist-get order :ref) "--"))))
-                  (emacs (concat invocation-directory invocation-name))
-                  ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
-                                        "--eval" "(byte-recompile-directory \".\" 0 'force)")))
-                  ((require 'elpaca))
-                  ((elpaca-generate-autoloads "elpaca" repo)))
-            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
-          (error "%s" (with-current-buffer buffer (buffer-string))))
-      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
-  (unless (require 'elpaca-autoloads nil t)
-    (require 'elpaca)
-    (elpaca-generate-autoloads "elpaca" repo)
-    (let ((load-source-file-function nil)) (load "./elpaca-autoloads"))))
-(add-hook 'after-init-hook #'elpaca-process-queues)
-(elpaca `(,@elpaca-order))
+(use-package use-package
+  :custom
+  ;; Don't automatically defer
+  (use-package-always-defer nil)
+  ;; Report loading details
+  (use-package-verbose t)
+  ;; This is really helpful for profiling
+  (use-package-minimum-reported-time 0)
+  ;; Expand normally
+  (use-package-expand-minimally nil)
+  ;; Navigate use-package declarations w/imenu
+  (use-package-enable-imenu-support t))
 
-(elpaca elpaca-use-package
-  (elpaca-use-package-mode))
+(use-package auto-compile
+  :ensure t
+  :defer 1
+  :custom
+  (auto-compile-display-buffer nil)
+  (auto-compile-mode-line-counter nil)
+  (auto-compile-use-mode-line nil)
+  (auto-compile-update-autoloads t)
+  :config
+  (auto-compile-on-load-mode)
+  (auto-compile-on-save-mode))
 
 (use-package emacs
   :demand t
@@ -457,16 +440,12 @@
     "g g" '(magit :wk "Magit")))
 
 (use-package majutsu
-  :ensure (:host github :repo "0WD0/majutsu")
+  :vc (:url "https://github.com/0WD0/majutsu")
   :config
   (dysthesis/start/leader-keys
   "g j" '(majutsu :wk "Majutsu")))
 
-(use-package doric-themes
-  :ensure t
-  :demand t
-  :config
-  (doric-themes-select 'doric-obsidian))
+(load-theme 'modus-vivendi t)
 (use-package solaire-mode
  :ensure t
  :config
@@ -514,6 +493,10 @@
                   org-scheduled-today
                   neo-file-link-face
                   org-scheduled-previously))))
+
+(use-package rainbow-mode
+  :ensure t
+  :hook (prog-mode . rainbow-mode))
 
 (use-package org
   :after (olivetti))

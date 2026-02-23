@@ -1,1 +1,0 @@
-/home/demiurge/.config/emacs/elpaca/repos/tempel-collection/tempel-collection.el
