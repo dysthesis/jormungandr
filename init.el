@@ -1,4 +1,5 @@
 (use-package use-package
+  :ensure t
   :custom
   ;; Don't automatically defer
   (use-package-always-defer nil)
@@ -159,12 +160,12 @@
   (marginalia-mode))
 
 (use-package nerd-icons-completion
-  :ensure t
-  :after marginalia
-  :config
-  (nerd-icons-completion-mode)
-  :hook
-  ('marginalia-mode-hook . 'nerd-icons-completion-marginalia-setup))
+:ensure t
+:after marginalia
+:config
+(nerd-icons-completion-mode)
+:hook
+(marginalia-mode . nerd-icons-completion-marginalia-setup))
 
 (use-package which-key
   :after (vertico)
@@ -264,7 +265,7 @@
 
 (use-package embark-consult
   :ensure t
-  :after (embark consult)
+  :after (:and embark consult)
   :demand t ; only necessary if you have the hook below
   :hook
   (embark-collect-mode . consult-preview-at-point-mode))
@@ -372,35 +373,177 @@
   :after tempel)
 
 (use-package smartparens
-  :ensure smartparens  ;; install the package
-  :hook (prog-mode text-mode markdown-mode) ;; add `smartparens-mode` to these hooks
-  ;; ("M-h" 'sp-backward-slurp-sexp)
-  ;; ("M-l" 'sp-forward-slurp-sexp)
-  ;; ("M-H" 'sp-backward-barf-sexp)
-  ;; ("M-L" 'sp-forward-barf-sexp)
-  ;; ("M-r" '(sp-rewrap-sexp :wk "Change wrapping parentheses"))
-  ;; ("C-M-t" 'sp-transpose-sexp)
+:ensure t
+:hook ((prog-mode text-mode markdown-mode) . smartparens-mode)
+:config
+(require 'smartparens-config))
+
+(use-package treesit
+  :defer t
+  :preface
+  (setq treesit-enabled-modes t)
+  (setq treesit-font-lock-level 4)
+  ;; HACK: The *-ts-mode major modes are inconsistent about how they treat
+  ;;   missing language grammars (some error out, some respect
+  ;;   `treesit-auto-install-grammar', some fall back to `fundamental-mode').
+  ;;   I'd like to address this poor UX using `major-mode-remap-alist' entries
+  ;;   created by `set-tree-sitter!' (which will fall back to the non-treesit
+  ;;   modes), but most *-ts-mode's clobber `auto-mode-alist' and/or
+  ;;   `interpreter-mode-alist' each time the major mode is activated, so those
+  ;;   must be undone too so they don't overwrite user config.
+  ;; TODO: Handle this during the 'doom sync' process instead.
+  (save-match-data
+    (dolist (sym '(auto-mode-alist interpreter-mode-alist))
+      (set
+       sym (cl-loop for (src . fn) in (symbol-value sym)
+                    unless (and (functionp fn)
+                                (string-match "-ts-mode\\(?:-maybe\\)?$" (symbol-name fn)))
+                    collect (cons src fn)))))
   :config
-  ;; Define keybindings with general.el
-  (general-define-key
-   :states 'insert
-   "M-h" 'sp-backward-slurp-sexp)
-  ;; load default config
-  (require 'smartparens-config))
+  (dolist (map '((awk "https://github.com/Beaglefoot/tree-sitter-awk" nil nil nil nil)
+                 (bibtex "https://github.com/latex-lsp/tree-sitter-bibtex" nil nil nil nil)
+                 (blueprint "https://github.com/huanie/tree-sitter-blueprint" nil nil nil nil)
+                 (commonlisp "https://github.com/tree-sitter-grammars/tree-sitter-commonlisp" nil nil nil nil)
+                 (latex "https://github.com/latex-lsp/tree-sitter-latex" nil nil nil nil)
+                 (make "https://github.com/tree-sitter-grammars/tree-sitter-make" nil nil nil nil)
+                 (nu "https://github.com/nushell/tree-sitter-nu" nil nil nil nil)
+                 (org "https://github.com/milisims/tree-sitter-org" nil nil nil nil)
+                 (perl "https://github.com/ganezdragon/tree-sitter-perl" nil nil nil nil)
+                 (proto "https://github.com/mitchellh/tree-sitter-proto" nil nil nil nil)
+                 (r "https://github.com/r-lib/tree-sitter-r" nil nil nil nil)
+                 (sql "https://github.com/DerekStride/tree-sitter-sql" "gh-pages" nil nil nil)
+                 (surface "https://github.com/connorlay/tree-sitter-surface" nil nil nil nil)
+                 (toml "https://github.com/tree-sitter/tree-sitter-toml" nil nil nil nil)
+                 (typst "https://github.com/uben0/tree-sitter-typst" "master" "src" nil nil)
+                 (verilog "https://github.com/gmlarumbe/tree-sitter-verilog" nil nil nil nil)
+                 (vhdl "https://github.com/alemuller/tree-sitter-vhdl" nil nil nil nil)
+                 (vue "https://github.com/tree-sitter-grammars/tree-sitter-vue" nil nil nil nil)
+                 (wast "https://github.com/wasm-lsp/tree-sitter-wasm" nil "wast/src" nil nil)
+                 (wat "https://github.com/wasm-lsp/tree-sitter-wasm" nil "wat/src" nil nil)
+                 (wgsl "https://github.com/mehmetoguzderin/tree-sitter-wgsl" nil nil nil nil)))
+    (cl-pushnew map treesit-language-source-alist :test #'eq :key #'car)))
+
+(use-package treesit-auto
+  :ensure t
+  :custom
+  (treesit-auto-install 'prompt)
+  :config
+  (treesit-auto-add-to-auto-mode-alist 'all)
+  (global-treesit-auto-mode))
+
+(use-package evil-textobj-tree-sitter
+  :ensure t
+  :after (:and treesit evil)
+  :config
+  (defvar dysthesis/tree-sitter-inner-text-objects-map (make-sparse-keymap))
+  (defvar dysthesis/tree-sitter-outer-text-objects-map (make-sparse-keymap))
+  (defvar dysthesis/tree-sitter-goto-previous-map (make-sparse-keymap))
+  (defvar dysthesis/tree-sitter-goto-next-map (make-sparse-keymap))
+
+  (evil-define-key '(visual operator) 'tree-sitter-mode
+    "i" dysthesis/tree-sitter-inner-text-objects-map
+    "a" dysthesis/tree-sitter-outer-text-objects-map)
+  (evil-define-key 'normal 'tree-sitter-mode
+    "[g" dysthesis/tree-sitter-goto-previous-map
+    "]g" dysthesis/tree-sitter-goto-next-map)
+
+  ;; Inner text objects
+  (define-key dysthesis/tree-sitter-inner-text-objects-map "A"
+    (evil-textobj-tree-sitter-get-textobj '("parameter.inner" "call.inner")))
+  (define-key dysthesis/tree-sitter-inner-text-objects-map "f"
+    (evil-textobj-tree-sitter-get-textobj "function.inner"))
+  (define-key dysthesis/tree-sitter-inner-text-objects-map "F"
+    (evil-textobj-tree-sitter-get-textobj "call.inner"))
+  (define-key dysthesis/tree-sitter-inner-text-objects-map "C"
+    (evil-textobj-tree-sitter-get-textobj "class.inner"))
+  (define-key dysthesis/tree-sitter-inner-text-objects-map "v"
+    (evil-textobj-tree-sitter-get-textobj "conditional.inner"))
+  (define-key dysthesis/tree-sitter-inner-text-objects-map "l"
+    (evil-textobj-tree-sitter-get-textobj "loop.inner"))
+
+  ;; Outer text objects
+  (define-key dysthesis/tree-sitter-outer-text-objects-map "A"
+    (evil-textobj-tree-sitter-get-textobj '("parameter.outer" "call.outer")))
+  (define-key dysthesis/tree-sitter-outer-text-objects-map "f"
+    (evil-textobj-tree-sitter-get-textobj "function.outer"))
+  (define-key dysthesis/tree-sitter-outer-text-objects-map "F"
+    (evil-textobj-tree-sitter-get-textobj "call.outer"))
+  (define-key dysthesis/tree-sitter-outer-text-objects-map "C"
+    (evil-textobj-tree-sitter-get-textobj "class.outer"))
+  (define-key dysthesis/tree-sitter-outer-text-objects-map "c"
+    (evil-textobj-tree-sitter-get-textobj "comment.outer"))
+  (define-key dysthesis/tree-sitter-outer-text-objects-map "v"
+    (evil-textobj-tree-sitter-get-textobj "conditional.outer"))
+  (define-key dysthesis/tree-sitter-outer-text-objects-map "l"
+    (evil-textobj-tree-sitter-get-textobj "loop.outer"))
+
+  ;; Goto previous
+  (define-key dysthesis/tree-sitter-goto-previous-map "a"
+    (evil-textobj-tree-sitter-goto-textobj "parameter.outer" t))
+  (define-key dysthesis/tree-sitter-goto-previous-map "f"
+    (evil-textobj-tree-sitter-goto-textobj "function.outer" t))
+  (define-key dysthesis/tree-sitter-goto-previous-map "F"
+    (evil-textobj-tree-sitter-goto-textobj "call.outer" t))
+  (define-key dysthesis/tree-sitter-goto-previous-map "C"
+    (evil-textobj-tree-sitter-goto-textobj "class.outer" t))
+  (define-key dysthesis/tree-sitter-goto-previous-map "c"
+    (evil-textobj-tree-sitter-goto-textobj "comment.outer" t))
+  (define-key dysthesis/tree-sitter-goto-previous-map "v"
+    (evil-textobj-tree-sitter-goto-textobj "conditional.outer" t))
+  (define-key dysthesis/tree-sitter-goto-previous-map "l"
+    (evil-textobj-tree-sitter-goto-textobj "loop.outer" t))
+
+  ;; Goto next
+  (define-key dysthesis/tree-sitter-goto-next-map "a"
+    (evil-textobj-tree-sitter-goto-textobj "parameter.outer"))
+  (define-key dysthesis/tree-sitter-goto-next-map "f"
+    (evil-textobj-tree-sitter-goto-textobj "function.outer"))
+  (define-key dysthesis/tree-sitter-goto-next-map "F"
+    (evil-textobj-tree-sitter-goto-textobj "call.outer"))
+  (define-key dysthesis/tree-sitter-goto-next-map "C"
+    (evil-textobj-tree-sitter-goto-textobj "class.outer"))
+  (define-key dysthesis/tree-sitter-goto-next-map "c"
+    (evil-textobj-tree-sitter-goto-textobj "comment.outer"))
+  (define-key dysthesis/tree-sitter-goto-next-map "v"
+    (evil-textobj-tree-sitter-goto-textobj "conditional.outer"))
+  (define-key dysthesis/tree-sitter-goto-next-map "l"
+    (evil-textobj-tree-sitter-goto-textobj "loop.outer")))
+
+(defvar +lsp--default-read-process-output-max nil)
+(defvar +lsp--default-gcmh-high-cons-threshold nil)
+(defvar +lsp--optimisation-init-p nil)
+
+(define-minor-mode +lsp-optimisation-mode
+  "Deploys universal GC and IPC optimisations for `lsp-mode' and `eglot'."
+  :global t
+  :init-value nil
+  (if (not +lsp-optimisation-mode)
+      (setq-default read-process-output-max +lsp--default-read-process-output-max
+                    gcmh-high-cons-threshold +lsp--default-gcmh-high-cons-threshold
+                    +lsp--optimisation-init-p nil)
+    ;; Only apply these settings once!
+    (unless +lsp--optimisation-init-p
+      (setq +lsp--default-read-process-output-max (default-value 'read-process-output-max)
+            +lsp--default-gcmh-high-cons-threshold (default-value 'gcmh-high-cons-threshold))
+      (setq-default read-process-output-max (* 1024 1024))
+      ;; REVIEW LSP causes a lot of allocations, with or without the native JSON
+      ;;        library, so we up the GC threshold to stave off GC-induced
+      ;;        slowdowns/freezes. Doom uses `gcmh' to enforce its GC strategy,
+      ;;        so we modify its variables rather than `gc-cons-threshold'
+      ;;        directly.
+      (setq-default gcmh-high-cons-threshold (* 2 +lsp--default-gcmh-high-cons-threshold))
+      (gcmh-set-high-threshold)
+      (setq +lsp--optimisation-init-p t))))
 
 (use-package eglot
   :defer t
-  :ensure nil
-  :hook
-  (prog-mode . (lambda ()
-                 (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
-                   (eglot-ensure))))
-  (eglot-managed-mode . +lsp-optimization-mode)
+  :hook ((prog-mode . (lambda ()
+			 (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
+			   (eglot-ensure))))
+	    (eglot-managed-mode . +lsp-optimisation-mode))
   :custom
   (eglot-sync-connect 1)
   (eglot-autoshutdown t)
-  ;; NOTE: We disable eglot-auto-display-help-buffer because :select t in
-  ;;   its popup rule causes eglot to steal focus too often.
   (eglot-auto-display-help-buffer nil)
   :config
   (dysthesis/start/leader-keys
@@ -419,7 +562,7 @@
 
 (use-package consult-eglot
   :ensure t
-  :after (eglot consult)
+  :after (:and eglot consult)
   :config
   (dysthesis/start/leader-keys
     "c s" '(consult-eglot-symbols :wk "Code Symbols")))
@@ -483,8 +626,8 @@
   :ensure t
   :hook
   ;; You might want to enable it only in org-mode or both text-mode and org-mode
-  ((org-mode) . mixed-pitch-mode)
-  ((markdown-mode) . mixed-pitch-mode)
+  ((org-mode . mixed-pitch-mode)
+   (markdown-mode . mixed-pitch-mode))
   :config
   (setq mixed-pitch-face 'variable-pitch)
   (setq mixed-pitch-fixed-pitch-faces
@@ -516,6 +659,32 @@
   :ensure t
   :hook (prog-mode . rainbow-mode))
 
+(use-package ligature
+  :ensure t
+  :config
+  ;; Enable the "www" ligature in every possible major mode
+  (ligature-set-ligatures 't '("www"))
+  ;; Enable traditional ligature support in eww-mode, if the
+  ;; `variable-pitch' face supports it
+  (ligature-set-ligatures 'eww-mode '("ff" "fi" "ffi"))
+  ;; Enable all Cascadia Code ligatures in programming modes
+  (ligature-set-ligatures 'prog-mode '("|||>" "<|||" "<==>" "<!--" "####" "~~>" "***" "||=" "||>"
+                                       ":::" "::=" "=:=" "===" "==>" "=!=" "=>>" "=<<" "=/=" "!=="
+                                       "!!." ">=>" ">>=" ">>>" ">>-" ">->" "->>" "-->" "---" "-<<"
+                                       "<~~" "<~>" "<*>" "<||" "<|>" "<$>" "<==" "<=>" "<=<" "<->"
+                                       "<--" "<-<" "<<=" "<<-" "<<<" "<+>" "</>" "###" "#_(" "..<"
+                                       "..." "+++" "/==" "///" "_|_" "www" "&&" "^=" "~~" "~@" "~="
+                                       "~>" "~-" "**" "*>" "*/" "||" "|}" "|]" "|=" "|>" "|-" "{|"
+                                       "[|" "]#" "::" ":=" ":>" ":<" "$>" "==" "=>" "!=" "!!" ">:"
+                                       ">=" ">>" ">-" "-~" "-|" "->" "--" "-<" "<~" "<*" "<|" "<:"
+                                       "<$" "<=" "<>" "<-" "<<" "<+" "</" "#{" "#[" "#:" "#=" "#!"
+                                       "##" "#(" "#?" "#_" "%%" ".=" ".-" ".." ".?" "+>" "++" "?:"
+                                       "?=" "?." "??" ";;" "/*" "/=" "/>" "//" "__" "~~" "(*" "*)"
+                                       "\\\\" "://"))
+  ;; Enables ligature checks globally in all buffers.  You can also do it
+  ;; per mode with `ligature-mode'.
+  (global-ligature-mode t))
+
 (use-package org
   :after (olivetti))
 
@@ -541,3 +710,11 @@
   :ensure t
   :mode "\\.nix\\'"
   :hook (nix-mode . eglot-ensure))
+
+(use-package nael
+  :ensure t
+  :defer t
+  :after eglot
+  :hook
+  ((nael-mode . eglot-ensure)
+   (nael-mode . abbrev-mode)))

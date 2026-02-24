@@ -25,7 +25,6 @@
           ("elpa-devel" . 99)
           ("melpa" . 90))
 
-        package-user-dir (expand-file-name "elpa/" "var/")
         package-gnupghome-dir (concat package-user-dir "gnupg"))
 (unless (file-exists-p package-user-dir)
   (mkdir package-user-dir t))
