@@ -24,6 +24,13 @@
   (auto-compile-on-load-mode)
   (auto-compile-on-save-mode))
 
+(use-package gcmh
+  :ensure t
+  :init
+  (setq gcmh-idle-delay 'auto
+        gcmh-auto-idle-delay-factor 10)
+  (gcmh-mode 1))
+
 (use-package emacs
   :demand t
   :ensure nil
@@ -449,7 +456,7 @@
 
   ;; Inner text objects
   (define-key dysthesis/tree-sitter-inner-text-objects-map "A"
-    (evil-textobj-tree-sitter-get-textobj '("parameter.inner" "call.inner")))
+    (evil-textobj-tree-sitter-get-textobj ("parameter.inner" "call.inner")))
   (define-key dysthesis/tree-sitter-inner-text-objects-map "f"
     (evil-textobj-tree-sitter-get-textobj "function.inner"))
   (define-key dysthesis/tree-sitter-inner-text-objects-map "F"
@@ -463,7 +470,7 @@
 
   ;; Outer text objects
   (define-key dysthesis/tree-sitter-outer-text-objects-map "A"
-    (evil-textobj-tree-sitter-get-textobj '("parameter.outer" "call.outer")))
+    (evil-textobj-tree-sitter-get-textobj ("parameter.outer" "call.outer")))
   (define-key dysthesis/tree-sitter-outer-text-objects-map "f"
     (evil-textobj-tree-sitter-get-textobj "function.outer"))
   (define-key dysthesis/tree-sitter-outer-text-objects-map "F"
@@ -479,35 +486,35 @@
 
   ;; Goto previous
   (define-key dysthesis/tree-sitter-goto-previous-map "a"
-    (evil-textobj-tree-sitter-goto-textobj "parameter.outer" t))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "parameter.outer" t)))
   (define-key dysthesis/tree-sitter-goto-previous-map "f"
-    (evil-textobj-tree-sitter-goto-textobj "function.outer" t))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "function.outer" t)))
   (define-key dysthesis/tree-sitter-goto-previous-map "F"
-    (evil-textobj-tree-sitter-goto-textobj "call.outer" t))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "call.outer" t)))
   (define-key dysthesis/tree-sitter-goto-previous-map "C"
-    (evil-textobj-tree-sitter-goto-textobj "class.outer" t))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "class.outer" t)))
   (define-key dysthesis/tree-sitter-goto-previous-map "c"
-    (evil-textobj-tree-sitter-goto-textobj "comment.outer" t))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "comment.outer" t)))
   (define-key dysthesis/tree-sitter-goto-previous-map "v"
-    (evil-textobj-tree-sitter-goto-textobj "conditional.outer" t))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "conditional.outer" t)))
   (define-key dysthesis/tree-sitter-goto-previous-map "l"
-    (evil-textobj-tree-sitter-goto-textobj "loop.outer" t))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "loop.outer" t)))
 
   ;; Goto next
   (define-key dysthesis/tree-sitter-goto-next-map "a"
-    (evil-textobj-tree-sitter-goto-textobj "parameter.outer"))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "parameter.outer")))
   (define-key dysthesis/tree-sitter-goto-next-map "f"
-    (evil-textobj-tree-sitter-goto-textobj "function.outer"))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "function.outer")))
   (define-key dysthesis/tree-sitter-goto-next-map "F"
-    (evil-textobj-tree-sitter-goto-textobj "call.outer"))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "call.outer")))
   (define-key dysthesis/tree-sitter-goto-next-map "C"
-    (evil-textobj-tree-sitter-goto-textobj "class.outer"))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "class.outer")))
   (define-key dysthesis/tree-sitter-goto-next-map "c"
-    (evil-textobj-tree-sitter-goto-textobj "comment.outer"))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "comment.outer")))
   (define-key dysthesis/tree-sitter-goto-next-map "v"
-    (evil-textobj-tree-sitter-goto-textobj "conditional.outer"))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "conditional.outer")))
   (define-key dysthesis/tree-sitter-goto-next-map "l"
-    (evil-textobj-tree-sitter-goto-textobj "loop.outer")))
+    (lambda () (interactive) (evil-textobj-tree-sitter-goto-textobj "loop.outer"))))
 
 (defvar +lsp--default-read-process-output-max nil)
 (defvar +lsp--default-gcmh-high-cons-threshold nil)
@@ -517,23 +524,28 @@
   "Deploys universal GC and IPC optimisations for `lsp-mode' and `eglot'."
   :global t
   :init-value nil
-  (if (not +lsp-optimisation-mode)
-      (setq-default read-process-output-max +lsp--default-read-process-output-max
-                    gcmh-high-cons-threshold +lsp--default-gcmh-high-cons-threshold
-                    +lsp--optimisation-init-p nil)
-    ;; Only apply these settings once!
-    (unless +lsp--optimisation-init-p
-      (setq +lsp--default-read-process-output-max (default-value 'read-process-output-max)
-            +lsp--default-gcmh-high-cons-threshold (default-value 'gcmh-high-cons-threshold))
-      (setq-default read-process-output-max (* 1024 1024))
-      ;; REVIEW LSP causes a lot of allocations, with or without the native JSON
-      ;;        library, so we up the GC threshold to stave off GC-induced
-      ;;        slowdowns/freezes. Doom uses `gcmh' to enforce its GC strategy,
-      ;;        so we modify its variables rather than `gc-cons-threshold'
-      ;;        directly.
-      (setq-default gcmh-high-cons-threshold (* 2 +lsp--default-gcmh-high-cons-threshold))
-      (gcmh-set-high-threshold)
-      (setq +lsp--optimisation-init-p t))))
+  (if (not (require 'gcmh nil 'noerror))
+      (progn
+        (setq +lsp-optimisation-mode nil)
+        (message "[+lsp] gcmh not available; skipping GC optimisation"))
+    (if (not +lsp-optimisation-mode)
+        (setq-default read-process-output-max +lsp--default-read-process-output-max
+                      gcmh-high-cons-threshold +lsp--default-gcmh-high-cons-threshold
+                      +lsp--optimisation-init-p nil)
+      ;; Only apply these settings once!
+      (unless +lsp--optimisation-init-p
+        (setq +lsp--default-read-process-output-max (default-value 'read-process-output-max)
+              +lsp--default-gcmh-high-cons-threshold (default-value 'gcmh-high-cons-threshold))
+        (setq-default read-process-output-max (* 1024 1024))
+        ;; REVIEW LSP causes a lot of allocations, with or without the native JSON
+        ;;        library, so we up the GC threshold to stave off GC-induced
+        ;;        slowdowns/freezes. Doom uses `gcmh' to enforce its GC strategy,
+        ;;        so we modify its variables rather than `gc-cons-threshold'
+        ;;        directly.
+        (setq-default gcmh-high-cons-threshold (* 2 +lsp--default-gcmh-high-cons-threshold))
+        (when (fboundp 'gcmh-set-high-threshold)
+          (gcmh-set-high-threshold))
+        (setq +lsp--optimisation-init-p t)))))
 
 (use-package eglot
   :defer t
@@ -718,3 +730,16 @@
   :hook
   ((nael-mode . eglot-ensure)
    (nael-mode . abbrev-mode)))
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages nil))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(fixed-pitch ((t (:family "JBMono Nerd Font" :height 130))))
+ '(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height 130)))))
