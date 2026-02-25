@@ -572,6 +572,13 @@
             (lambda ()
               (add-hook 'before-save-hook 'eglot-format nil t))))
 
+(when (executable-find "emacs-lsp-booster")
+  (use-package eglot-booster
+      :ensure t
+      :vc (:url "https://github.com/jdtsmith/eglot-booster.git")
+      :after eglot
+      :config (eglot-booster-mode)))
+
 (use-package consult-eglot
   :ensure t
   :after (:and eglot consult)
@@ -583,6 +590,89 @@
   :ensure t
   :config
   (direnv-mode))
+
+(use-package dape
+  :ensure t
+  :preface
+  (defun dysthesis/dape--codelldb-dir-default ()
+    "Compute the codelldb adapter directory from the environment."
+    (let ((dir (getenv "CODELLDB_DIR")))
+      (if (and dir (not (string= dir "")))
+          dir
+        (expand-file-name "debug-adapters" user-emacs-directory))))
+
+  (defcustom dysthesis/dape-codelldb-dir (dysthesis/dape--codelldb-dir-default)
+    "Directory containing the codelldb debug adapter."
+    :type 'directory)
+
+  (defun dysthesis/dape--codelldb-command ()
+    "Return the codelldb adapter command path for `dape-configs`."
+    (let* ((base (expand-file-name dysthesis/dape-codelldb-dir))
+           (candidates (list
+                        ;; Nix: CODELLDB_DIR is the adapter dir
+                        (file-name-concat base "codelldb")
+                        ;; Nix: CODELLDB_DIR is the extension root
+                        (file-name-concat base "adapter" "codelldb")
+                        ;; Default dape layout under debug-adapters
+                        (file-name-concat base
+                                          "codelldb"
+                                          "extension"
+                                          "adapter"
+                                          "codelldb"))))
+      (let ((found nil))
+        (dolist (path candidates)
+          (when (and (not found) (file-executable-p path))
+            (setq found path)))
+        (or found (car (last candidates))))))
+
+  (defun dysthesis/dape--refresh-codelldb-configs ()
+    "Refresh codelldb entries in `dape-configs`."
+    (when (boundp 'dape-configs)
+      (dolist (name '(codelldb-cc codelldb-rust))
+        (let ((cfg (alist-get name dape-configs)))
+          (when cfg
+            (setf (alist-get name dape-configs)
+                  (plist-put (copy-tree cfg)
+                             'command
+                             #'dysthesis/dape--codelldb-command)))))))
+
+  (defun dysthesis/dape-refresh-adapter-dir (&rest _)
+    "Refresh codelldb adapter settings from the current environment."
+    (setq dysthesis/dape-codelldb-dir (dysthesis/dape--codelldb-dir-default))
+    (dysthesis/dape--refresh-codelldb-configs))
+  (dysthesis/dape-refresh-adapter-dir)
+  (with-eval-after-load 'dape
+    (dysthesis/dape-refresh-adapter-dir))
+  ;; Keep `dape-adapter-dir` in sync when direnv updates environment vars.
+  (with-eval-after-load 'direnv
+    (advice-add 'direnv-update-directory-environment :after
+                #'dysthesis/dape-refresh-adapter-dir))
+  :hook
+  ;; Save breakpoints on quit
+  (kill-emacs . dape-breakpoint-save)
+  ;; Load breakpoints on startup
+  (after-init . dape-breakpoint-load)
+
+  :config
+  ;; Pulse source line (performance hit)
+  ;; (add-hook 'dape-display-source-hook #'pulse-momentary-highlight-one-line)
+
+  ;; Save buffers on startup, useful for interpreted languages
+  (add-hook 'dape-start-hook (lambda () (save-some-buffers t t)))
+
+  ;; Kill compile buffer on build success
+  (add-hook 'dape-compile-hook #'kill-buffer))
+
+;; For a more ergonomic Emacs and `dape' experience
+(use-package repeat
+  :ensure t
+  :custom
+  (repeat-mode +1))
+
+;; Left and right side windows occupy full frame height
+(use-package emacs
+  :custom
+  (window-sides-vertical t))
 
 (use-package transient
   :ensure t)
@@ -673,6 +763,7 @@
 
 (use-package ligature
   :ensure t
+  :hook (prog-mode . ligature-mode)
   :config
   ;; Enable the "www" ligature in every possible major mode
   (ligature-set-ligatures 't '("www"))
@@ -730,16 +821,34 @@
   :hook
   ((nael-mode . eglot-ensure)
    (nael-mode . abbrev-mode)))
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-selected-packages nil))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(fixed-pitch ((t (:family "JBMono Nerd Font" :height 130))))
- '(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height 130)))))
+
+(use-package rustic
+  :ensure t
+  :after (corfu eglot treesit)
+  ;; :bind (:map rustic-mode-map
+  ;;             ("M-j" . lsp-ui-imenu)
+  ;;             ("M-?" . lsp-find-references)
+  ;;             ("C-c C-c l" . flycheck-list-errors)
+  ;;             ("C-c C-c a" . lsp-execute-code-action)
+  ;;             ("C-c C-c r" . lsp-rename)
+  ;;             ("C-c C-c q" . lsp-workspace-restart)
+  ;;             ("C-c C-c Q" . lsp-workspace-shutdown)
+  ;;             ("C-c C-c s" . lsp-rust-analyzer-status))
+  :config
+  ;; uncomment for less flashiness
+  ;; (setq lsp-eldoc-hook nil)
+  ;; (setq lsp-enable-symbol-highlighting nil)
+  ;; (setq lsp-signature-auto-activate nil)
+
+  ;; comment to disable rustfmt on save
+  (setq rustic-format-on-save t)
+  (add-hook 'rustic-mode-hook 'dysthesisrustic-mode-hook))
+
+(defun dysthesis/rustic-mode-hook ()
+  ;; so that run C-c C-c C-r works without having to confirm, but don't try to
+  ;; save rust buffers that are not file visiting. Once
+  ;; https://github.com/brotzeit/rustic/issues/253 has been resolved this should
+  ;; no longer be necessary.
+  (when buffer-file-name
+    (setq-local buffer-save-without-query t))
+  (add-hook 'before-save-hook 'lsp-format-buffer nil t))

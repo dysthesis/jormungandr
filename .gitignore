@@ -8,3 +8,5 @@ auto-save-list/
 elpagnupg/
 elpaca/
 .org-id-locations
+tree-sitter/
+tramp
