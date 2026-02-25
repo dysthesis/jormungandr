@@ -11,3 +11,4 @@ elpaca/
 tree-sitter/
 tramp
 dape-breakpoints
+.direnv/
