@@ -26,11 +26,10 @@ pkgs.stdenv.mkDerivation {
 
   installPhase = ''
     runHook preInstall
-    dest="$out/share/jormungandr"
-    mkdir -p "$dest"
-    cp README.org init.el early-init.el "$dest/"
+    mkdir -p "$out"
+    cp README.org init.el early-init.el "$out/"
     if [ -d themes ]; then
-      cp -r themes "$dest/"
+      cp -r themes "$out/"
     fi
     runHook postInstall
   '';

@@ -1,12 +1,10 @@
 {
-  description = "Jormungandr Emacs configuration (flake-parts)";
+  description = "Personal Emacs configuration";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs";
     flake-parts.url = "github:hercules-ci/flake-parts";
     emacs-overlay.url = "github:nix-community/emacs-overlay";
-    # Optional: use npins to pin non-flake VCS deps in the future.
-    # npins.url = "github:andir/npins";
   };
 
   outputs = inputs @ {
@@ -29,58 +27,22 @@
           overlays = [emacs-overlay.overlay];
           config.allowUnfree = true;
         };
-        epkgs = pkgs.emacsPackagesFor pkgs.emacs-unstable-pgtk;
-        vcPkgs = import ./nix/vc-packages.nix {
-          inherit pkgs;
-          p = epkgs;
-        };
+        vcPackagesFor = epkgs:
+          import ./nix/vc-packages.nix {
+            inherit pkgs;
+            p = epkgs;
+          };
         tangle = pkgs.callPackage ./nix/tangle.nix {};
-        jormungandrPackages = with epkgs;
-          [
-            use-package
-            auto-compile
-            gcmh
-            vertico
-            orderless
-            marginalia
-            nerd-icons
-            nerd-icons-completion
-            which-key
-            general
-            embark
-            embark-consult
-            consult
-            evil
-            evil-collection
-            corfu
-            nerd-icons-corfu
-            cape
-            tempel
-            tempel-collection
-            smartparens
-            treesit-auto
-            evil-textobj-tree-sitter
-            eglot
-            consult-eglot
-            direnv
-            dape
-            transient
-            magit
-            doom-themes
-            solaire-mode
-            doom-modeline
-            olivetti
-            mixed-pitch
-            rainbow-mode
-            ligature
-            org-modern
-            nix-mode
-            rustic
-            autothemer
-          ]
-          ++ vcPkgs;
-
-        emacs-unwrapped = epkgs.emacsWithPackages (_p: jormungandrPackages);
+        emacs-unwrapped = pkgs.emacsWithPackagesFromUsePackage {
+          package = pkgs.emacs-unstable-pgtk;
+          config = "${tangle}/init.el";
+          # Extra packages that aren't discoverable via :ensure or need pinning.
+          extraEmacsPackages = epkgs:
+            (vcPackagesFor epkgs) ++ (with pkgs; [
+              epkgs.nerd-icons
+              emacs-lsp-booster
+            ]);
+        };
         bootScript = pkgs.writeShellScript "jormungandr-boot" ''
           set -e
           cfgroot=''${XDG_CONFIG_HOME:-$HOME/.config}/jormungandr
@@ -103,7 +65,7 @@
           postBuild = ''
             rm $out/bin/emacs
             makeWrapper ${emacs-unwrapped}/bin/emacs $out/bin/emacs \
-              --set DYSTHESIS_DISABLE_PACKAGE_EL 1 \
+              --set JORMUNGANDR_DISABLE_PACKAGE_EL 1 \
               --run ". ${bootScript}"
           '';
         };
@@ -140,6 +102,8 @@
             pkgs.runCommand "emacs-smoke" {
               buildInputs = [self.packages.${system}.jormungandr];
             } ''
+              export HOME=$TMPDIR
+              export XDG_CONFIG_HOME=$HOME/.config
               ${self.packages.${system}.jormungandr}/bin/emacs --batch --eval "(message \"ok\")"
               touch $out
             '';

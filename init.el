@@ -574,8 +574,7 @@
 
 (when (executable-find "emacs-lsp-booster")
   (use-package eglot-booster
-      :ensure t
-      :vc (:url "https://github.com/jdtsmith/eglot-booster.git")
+      :ensure nil
       :after eglot
       :config (eglot-booster-mode)))
 
@@ -685,7 +684,7 @@
     "g g" '(magit :wk "Magit")))
 
 (use-package majutsu
-  :vc (:url "https://github.com/0WD0/majutsu")
+  :ensure nil
   :config
   (dysthesis/start/leader-keys
   "g j" '(majutsu :wk "Majutsu")))
@@ -858,7 +857,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages nil)
- '(package-vc-selected-packages '((majutsu :url "https://github.com/0WD0/majutsu"))))
+ '(package-vc-selected-packages nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

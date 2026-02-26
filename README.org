@@ -887,8 +887,7 @@ And we use LSP booster to speed up RPC between Emacs and the LSP.
 #+begin_src emacs-lisp :tangle init.el
   (when (executable-find "emacs-lsp-booster")
     (use-package eglot-booster
-        :ensure t
-        :vc (:url "https://github.com/jdtsmith/eglot-booster.git")
+        :ensure nil
         :after eglot
         :config (eglot-booster-mode)))
 #+end_src
@@ -1020,7 +1019,6 @@ We use [[https://github.com/svaante/dape][dape]], since it does not strictly dep
 
   ;; For a more ergonomic Emacs and `dape' experience
   (use-package repeat
-    :ensure nil
     :custom
     (repeat-mode +1))
 
@@ -1056,7 +1054,7 @@ Magit, but for Jujutsu.
 
 #+begin_src emacs-lisp
   (use-package majutsu
-    :vc (:url "https://github.com/0WD0/majutsu")
+    :ensure nil
     :config
     (dysthesis/start/leader-keys
     "g j" '(majutsu :wk "Majutsu")))

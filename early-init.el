@@ -13,7 +13,7 @@
 
 (setq dysthesis/disable-package-el
       (or dysthesis/disable-package-el
-          (getenv "DYSTHESIS_DISABLE_PACKAGE_EL")))
+          (getenv "JORMUNGANDR_DISABLE_PACKAGE_EL")))
 
 (when dysthesis/disable-package-el
   ;; In Nix build we still want a writable user dir for caches, but keep
