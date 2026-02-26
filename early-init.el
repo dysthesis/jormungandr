@@ -30,13 +30,6 @@
         package-quickstart-file nil))
 
 (when dysthesis/disable-package-el
-  ;; Prevent use-package from invoking package.el installers.
-  (require 'seq)
-  (let* ((deps (seq-find (lambda (p) (string-match "emacs-packages-deps" p))
-                         load-path))
-         (elpa (when deps (expand-file-name "elpa" deps))))
-    (when elpa
-      (setq package-user-dir package-user-dir)))
   ;; Keep native-comp outputs in the Nix store and avoid runtime writes.
   (when (getenv "JORMUNGANDR_ELN_DIR")
     (require 'comp nil 'noerror)
@@ -49,25 +42,18 @@
     (setq native-comp-jit-compilation nil
           native-comp-deferred-compilation nil
           native-comp-async-report-warnings-errors 'silent))
-  (setq package-enable-at-startup t
+  ;; Disable package.el entirely; rely on bundled packages.
+  (setq package-enable-at-startup nil
         package-archives nil
-        package-archive-priorities nil)
-  (require 'package)
-  (package-initialize)
+        package-archive-priorities nil
+        package-user-dir package-user-dir)
   (setq use-package-always-ensure nil
-        use-package-ensure-function
-        (lambda (&rest _args) t)))
+        use-package-ensure-function (lambda (&rest _args) t)))
 
 (setq default-frame-alist '((fullscreen . maximized)
     			      (background-color . "#000000")
   			      (ns-appearance . dark)
   			      (ns-transparent-titlebar . t)))
-
-(when dysthesis/disable-package-el
-  (setq package-enable-at-startup nil
-        package-quickstart nil
-        package-archives nil
-        package-archive-priorities nil))
 
 (unless dysthesis/disable-package-el
   (require 'package)
