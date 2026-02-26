@@ -9,12 +9,14 @@
 (setq inhibit-startup-echo-area-message (user-login-name))
 
 (defvar dysthesis/disable-package-el nil
-  "When non-nil, skip package.el setup (used for Nix builds).")
+  "Set non-nil to disable package.el. Preferred override: env JORMUNGANDR_DISABLE_PACKAGE_EL=1.")
 
-(setq dysthesis/disable-package-el
-      (or dysthesis/disable-package-el
-          (getenv "JORMUNGANDR_DISABLE_PACKAGE_EL")))
+(defconst dysthesis/package-el-enabled
+  (not (or dysthesis/disable-package-el
+           (getenv "JORMUNGANDR_DISABLE_PACKAGE_EL")))
+  "True when package.el should be active (default); false in immutable/Nix builds.")
 
+;; Compute immutable config location (Nix store) and mutable state location.
 (let* ((store-dir (file-name-directory (or load-file-name buffer-file-name)))
        (state-root (or (getenv "JORMUNGANDR_STATE_DIR")
                        (expand-file-name "jormungandr"
@@ -28,13 +30,15 @@
         package-user-dir      (expand-file-name "elpa" user-emacs-directory)
         package-quickstart    nil
         package-quickstart-file nil))
+(make-directory user-emacs-directory t)
 
-(when dysthesis/disable-package-el
+(unless dysthesis/package-el-enabled
   ;; Keep native-comp outputs in the Nix store and avoid runtime writes.
   (when (getenv "JORMUNGANDR_ELN_DIR")
     (require 'comp nil 'noerror)
-    (require 'startup nil 'noerror)
     (let ((eln (getenv "JORMUNGANDR_ELN_DIR")))
+      ;; Try to load startup.el quietly to get startup-redirect-eln-cache.
+      (load "startup" nil t)
       (when (fboundp 'startup-redirect-eln-cache)
         (startup-redirect-eln-cache eln)
         ;; Keep only store eln path.
@@ -42,11 +46,23 @@
     (setq native-comp-jit-compilation nil
           native-comp-deferred-compilation nil
           native-comp-async-report-warnings-errors 'silent))
-  ;; Disable package.el entirely; rely on bundled packages.
-  (setq package-enable-at-startup nil
+
+  ;; Disable network, but still activate Nix-provided packages + autoloads.
+  (setq package-enable-at-startup t
         package-archives nil
         package-archive-priorities nil
-        package-user-dir package-user-dir)
+        package-user-dir package-user-dir
+        package-load-list nil
+        package--init-file-ensured t)
+  (require 'seq)
+  (let* ((deps-elpa (seq-find (lambda (p)
+                                (string-match "emacs-packages-deps/.*/share/emacs/site-lisp/elpa" p))
+                              load-path)))
+    (setq package-directory-list
+          (delete-dups (delq nil (list package-user-dir deps-elpa)))))
+  (make-directory package-user-dir t)
+  (load "package" nil t)
+  (package-initialize)
   (setq use-package-always-ensure nil
         use-package-ensure-function (lambda (&rest _args) t)))
 
@@ -55,7 +71,7 @@
   			      (ns-appearance . dark)
   			      (ns-transparent-titlebar . t)))
 
-(unless dysthesis/disable-package-el
+(when dysthesis/package-el-enabled
   (require 'package)
   (setopt package-archives
           '(("elpa" . "https://elpa.gnu.org/packages/")
