@@ -1,131 +1,148 @@
 {
-  description = "Emacs flake";
+  description = "Jormungandr Emacs configuration (flake-parts)";
 
   inputs = {
-    flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs";
+    flake-parts.url = "github:hercules-ci/flake-parts";
     emacs-overlay.url = "github:nix-community/emacs-overlay";
+    # Optional: use npins to pin non-flake VCS deps in the future.
+    # npins.url = "github:andir/npins";
   };
 
-  outputs = inputs @ {flake-parts, ...}:
+  outputs = inputs @ {
+    self,
+    nixpkgs,
+    flake-parts,
+    emacs-overlay,
+    ...
+  }:
     flake-parts.lib.mkFlake {inherit inputs;} {
       systems = [
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
-        "x86_64-darwin"
       ];
-      perSystem = {
-        pkgs,
-        system,
-        ...
-      }: {
-        _module.args.pkgs = import inputs.nixpkgs {
+
+      perSystem = {system, ...}: let
+        pkgs = import nixpkgs {
           inherit system;
-          overlays = [
-            inputs.emacs-overlay.overlays.default
-          ];
-          config = {};
+          overlays = [emacs-overlay.overlay];
+          config.allowUnfree = true;
         };
-        devShells.default = pkgs.mkShellNoCC {
+        epkgs = pkgs.emacsPackagesFor pkgs.emacs-unstable-pgtk;
+        vcPkgs = import ./nix/vc-packages.nix {
+          inherit pkgs;
+          p = epkgs;
+        };
+        tangle = pkgs.callPackage ./nix/tangle.nix {};
+        jormungandrPackages = with epkgs;
+          [
+            use-package
+            auto-compile
+            gcmh
+            vertico
+            orderless
+            marginalia
+            nerd-icons
+            nerd-icons-completion
+            which-key
+            general
+            embark
+            embark-consult
+            consult
+            evil
+            evil-collection
+            corfu
+            nerd-icons-corfu
+            cape
+            tempel
+            tempel-collection
+            smartparens
+            treesit-auto
+            evil-textobj-tree-sitter
+            eglot
+            consult-eglot
+            direnv
+            dape
+            transient
+            magit
+            doom-themes
+            solaire-mode
+            doom-modeline
+            olivetti
+            mixed-pitch
+            rainbow-mode
+            ligature
+            org-modern
+            nix-mode
+            rustic
+            autothemer
+          ]
+          ++ vcPkgs;
+
+        emacs-unwrapped = epkgs.emacsWithPackages (_p: jormungandrPackages);
+        bootScript = pkgs.writeShellScript "jormungandr-boot" ''
+          set -e
+          cfgroot=''${XDG_CONFIG_HOME:-$HOME/.config}/jormungandr
+          export XDG_CONFIG_HOME="$cfgroot"
+          cfg="$cfgroot/emacs"
+          if [ ! -e "$cfg/init.el" ]; then
+            mkdir -p "$cfg"
+            cp -r ${tangle}/share/jormungandr/* "$cfg"/
+          fi
+          set -- "--init-directory" "$cfg" \
+                 "--load" "$cfg/early-init.el" \
+                 "--load" "$cfg/init.el" \
+                 "$@"
+        '';
+
+        jormungandr = pkgs.symlinkJoin {
+          name = "jormungandr";
+          paths = [emacs-unwrapped];
+          buildInputs = [pkgs.makeWrapper];
+          postBuild = ''
+            rm $out/bin/emacs
+            makeWrapper ${emacs-unwrapped}/bin/emacs $out/bin/emacs \
+              --set DYSTHESIS_DISABLE_PACKAGE_EL 1 \
+              --run ". ${bootScript}"
+          '';
+        };
+      in {
+        _module.args.pkgs = pkgs;
+
+        packages = {
+          inherit tangle jormungandr;
+        };
+
+        apps.default = {
+          type = "app";
+          program = "${self.packages.${system}.jormungandr}/bin/emacs";
+        };
+
+        devShells.default = pkgs.mkShell {
           packages = with pkgs; [
+            self.packages.${system}.jormungandr
+
             nixd
-            nixfmt
-            alejandra
+            nil
+            rust-analyzer
+            direnv
+            just
             statix
             deadnix
+            alejandra
           ];
         };
 
-        packages = rec {
-          jormungandr = let
-            readmeForUsePackage =
-              pkgs.runCommand "README-usepackage.org" {
-                nativeBuildInputs = [pkgs.coreutils pkgs.gnused];
-              } ''
-                sed -e 's/:tangle early-init.el/:tangle yes/g' \
-                    -e 's/:tangle init.el/:tangle yes/g' \
-                    ${./README.org} \
-                  | LC_ALL=C tr -cd '\11\12\15\40-\176' > $out
-              '';
-            baseEmacs = pkgs.emacsWithPackagesFromUsePackage {
-              package = pkgs.emacs-unstable-pgtk or pkgs.emacs-git.pgtk or pkgs.emacs;
-              config = readmeForUsePackage;
-              defaultInitFile = pkgs.writeText "default.el" ''
-                (load "${./early-init.el}")
-                (load "${./init.el}")
-                ;; Nix-managed packages, disable package.el
-                (setq package-enable-at-startup nil
-                      package-quickstart nil
-                      package-archives nil)
-                (with-eval-after-load 'package
-                  (advice-add 'package-initialize :override #'ignore)
-                  (advice-add 'package--ensure-init-file :override #'ignore))
-                (setq use-package-always-ensure nil
-                      use-package-ensure-function #'ignore)
-
-                ;; Nix-provided codelldb adapter path for dape
-                (defconst dysthesis/dape-codelldb-dir-nix
-                  "${pkgs.vscode-extensions.vadimcn.vscode-lldb}/share/vscode/extensions/vadimcn.vscode-lldb/adapter/"
-                  "Nix-provided codelldb adapter directory.")
-                (setq dysthesis/dape-codelldb-dir dysthesis/dape-codelldb-dir-nix)
-                (setenv "CODELLDB_DIR" dysthesis/dape-codelldb-dir-nix)
-
-                (defun dysthesis/dape--force-codelldb-dir (&rest _)
-                  "Keep codelldb dir pinned to the Nix path."
-                  (setq dysthesis/dape-codelldb-dir dysthesis/dape-codelldb-dir-nix)
-                  (when (fboundp 'dysthesis/dape--refresh-codelldb-configs)
-                    (dysthesis/dape--refresh-codelldb-configs)))
-                (add-hook 'after-init-hook #'dysthesis/dape--force-codelldb-dir)
-                (with-eval-after-load 'dape
-                  (advice-add 'dysthesis/dape-refresh-adapter-dir
-                              :override
-                              #'dysthesis/dape--force-codelldb-dir)
-                  (dysthesis/dape--force-codelldb-dir))
-                ;; Avoid direnv reloading overriding the Nix codelldb path
-                (with-eval-after-load 'direnv
-                  (advice-remove 'direnv-update-directory-environment
-                                 #'dysthesis/dape-refresh-adapter-dir))
-              '';
-              extraEmacsPackages = _epkgs:
-                with pkgs; [
-                  emacs-lsp-booster
-                  vscode-extensions.vadimcn.vscode-lldb
-                ];
-            };
-          in
-            pkgs.symlinkJoin {
-              name = "jormungandr";
-              paths = [baseEmacs];
-              meta = {
-                mainProgram = "emacs";
-              };
-              postBuild = ''
-                rm -f $out/bin/emacs
-                cat > $out/bin/emacs <<'EOF'
-                #!@RUNTIME_SHELL@
-                set -euo pipefail
-                debug_run=false
-                args=()
-                for arg in "$@"; do
-                  if [ "$arg" = "--debug-run" ]; then
-                    debug_run=true
-                  else
-                    args+=("$arg")
-                  fi
-                done
-                if $debug_run; then
-                  exec @EMACS_BIN@ --debug-init "''${args[@]}"
-                else
-                  exec @EMACS_BIN@ "''${args[@]}"
-                fi
-                EOF
-                sed -i "s|@RUNTIME_SHELL@|${pkgs.runtimeShell}|g" $out/bin/emacs
-                sed -i "s|@EMACS_BIN@|${baseEmacs}/bin/emacs|g" $out/bin/emacs
-                chmod +x $out/bin/emacs
-              '';
-            };
-          default = jormungandr;
+        checks = {
+          tangle = tangle;
+          emacs-smoke =
+            pkgs.runCommand "emacs-smoke" {
+              buildInputs = [self.packages.${system}.jormungandr];
+            } ''
+              ${self.packages.${system}.jormungandr}/bin/emacs --batch --eval "(message \"ok\")"
+              touch $out
+            '';
         };
       };
     };

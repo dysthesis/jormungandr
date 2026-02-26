@@ -77,27 +77,39 @@ Finally, we can put it all together and assign it to our =default-frame-alist=:
 #+end_src
 
 ** Package.el as a package manager
+When running under the Nix flake, we disable package.el entirely to avoid network access.
+The flake sets =dysthesis/disable-package-el= to non-nil before loading this file.
 #+begin_src emacs-lisp
-  (require 'package)
-  (setopt package-archives
-          '(("elpa" . "https://elpa.gnu.org/packages/")
-            ("elpa-devel" . "https://elpa.gnu.org/devel/")
-            ("nongnu" . "https://elpa.nongnu.org/nongnu/")
-            ("melpa" . "https://melpa.org/packages/"))
+  (defvar dysthesis/disable-package-el nil
+    "When non-nil, skip package.el setup (used for Nix builds).")
 
-          package-archive-priorities
-          '(;; Prefer development packages
-            ("elpa-devel" . 99)
-            ("melpa" . 90))
+  (when dysthesis/disable-package-el
+    (setq package-enable-at-startup nil
+          package-quickstart nil
+          package-archives nil
+          package-archive-priorities nil))
 
-          package-gnupghome-dir (concat package-user-dir "gnupg"))
-  (unless (file-exists-p package-user-dir)
-    (mkdir package-user-dir t))
-  (setopt package-quickstart-file (expand-file-name "package-quickstart.el" "var/cache/"))
+  (unless dysthesis/disable-package-el
+    (require 'package)
+    (setopt package-archives
+            '(("elpa" . "https://elpa.gnu.org/packages/")
+              ("elpa-devel" . "https://elpa.gnu.org/devel/")
+              ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+              ("melpa" . "https://melpa.org/packages/"))
 
-  (package-initialize)
-  (when (package-installed-p 'compat)
-    (require 'compat nil t))
+            package-archive-priorities
+            '(;; Prefer development packages
+              ("elpa-devel" . 99)
+              ("melpa" . 90))
+
+            package-gnupghome-dir (concat package-user-dir "gnupg"))
+    (unless (file-exists-p package-user-dir)
+      (mkdir package-user-dir t))
+    (setopt package-quickstart-file (expand-file-name "package-quickstart.el" "var/cache/"))
+
+    (package-initialize)
+    (when (package-installed-p 'compat)
+      (require 'compat nil t)))
 #+end_src
 
 * Init
@@ -1008,7 +1020,7 @@ We use [[https://github.com/svaante/dape][dape]], since it does not strictly dep
 
   ;; For a more ergonomic Emacs and `dape' experience
   (use-package repeat
-    :ensure t
+    :ensure nil
     :custom
     (repeat-mode +1))
 
