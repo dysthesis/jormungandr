@@ -1,3 +1,11 @@
+(defconst dysthesis/immutable-config (getenv "JORMUNGANDR_IMMUTABLE"))
+
+(defconst dysthesis/state-dir user-emacs-directory)
+(defconst dysthesis/state-cache (expand-file-name "cache" dysthesis/state-dir))
+(make-directory dysthesis/state-cache t)
+(setq savehist-file (expand-file-name "history" dysthesis/state-cache)
+      auto-save-list-file-prefix (expand-file-name "auto-save-list/.saves-" dysthesis/state-dir))
+
 (use-package use-package
   :ensure t
   :custom
@@ -12,17 +20,19 @@
   ;; Navigate use-package declarations w/imenu
   (use-package-enable-imenu-support t))
 
-(use-package auto-compile
-  :ensure t
-  :defer 1
-  :custom
-  (auto-compile-display-buffer nil)
-  (auto-compile-mode-line-counter nil)
-  (auto-compile-use-mode-line nil)
-  (auto-compile-update-autoloads t)
-  :config
-  (auto-compile-on-load-mode)
-  (auto-compile-on-save-mode))
+;; Avoid runtime byte-compilation when immutability is requested.
+(unless dysthesis/immutable-config
+  (use-package auto-compile
+    :ensure t
+    :defer 1
+    :custom
+    (auto-compile-display-buffer nil)
+    (auto-compile-mode-line-counter nil)
+    (auto-compile-use-mode-line nil)
+    (auto-compile-update-autoloads t)
+    :config
+    (auto-compile-on-load-mode)
+    (auto-compile-on-save-mode)))
 
 (use-package gcmh
   :ensure t
@@ -183,18 +193,22 @@
       which-key-idle-secondary-delay 0.05)
   (which-key-mode))
 
+(eval-and-compile
+  ;; Make leader macro available at compile- and load-time so downstream
+  ;; use-package forms can macroexpand it.
+  (require 'general)
+  (general-create-definer dysthesis/start/leader-keys
+    :states '(normal insert visual motion emacs)
+    :keymaps 'override
+    :prefix "SPC"
+    :global-prefix "C-SPC"))
+
 (use-package general
   :ensure t
   :after (evil)
   :demand t
   :config
   (general-evil-setup)
-  ;; Set up 'SPC' as the leader key
-  (general-create-definer dysthesis/start/leader-keys
-    :states '(normal insert visual motion emacs)
-    :keymaps 'override
-    :prefix "SPC"           ;; Set leader key
-    :global-prefix "C-SPC") ;; Set global leader key
 
   (dysthesis/start/leader-keys
     "." '(find-file :wk "Find file")
@@ -593,6 +607,9 @@
 (use-package dape
   :ensure t
   :preface
+  (defconst dysthesis/dape-breakpoint-file
+    (expand-file-name "dape/breakpoints" dysthesis/state-dir))
+  (make-directory (file-name-directory dysthesis/dape-breakpoint-file) t)
   (defun dysthesis/dape--codelldb-dir-default ()
     "Compute the codelldb adapter directory from the environment."
     (let ((dir (getenv "CODELLDB_DIR")))
@@ -660,7 +677,10 @@
   (add-hook 'dape-start-hook (lambda () (save-some-buffers t t)))
 
   ;; Kill compile buffer on build success
-  (add-hook 'dape-compile-hook #'kill-buffer))
+  (add-hook 'dape-compile-hook #'kill-buffer)
+
+  ;; Persist breakpoints to state dir instead of store/home.
+  (setq dape-breakpoint-file dysthesis/dape-breakpoint-file))
 
 ;; For a more ergonomic Emacs and `dape' experience
 (use-package repeat

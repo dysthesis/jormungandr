@@ -15,26 +15,40 @@
       (or dysthesis/disable-package-el
           (getenv "JORMUNGANDR_DISABLE_PACKAGE_EL")))
 
+(let* ((store-dir (file-name-directory (or load-file-name buffer-file-name)))
+       (state-root (or (getenv "JORMUNGANDR_STATE_DIR")
+                       (expand-file-name "jormungandr"
+                                         (or (getenv "XDG_STATE_HOME")
+                                             (expand-file-name "~/.local/state/"))))))
+  ;; Keep config in the store; direct all writable state elsewhere.
+  (setq user-init-file        (expand-file-name "init.el" store-dir)
+        early-init-file       (expand-file-name "early-init.el" store-dir)
+        user-emacs-directory  (file-name-as-directory
+                               (expand-file-name "emacs" state-root))
+        package-user-dir      (expand-file-name "elpa" user-emacs-directory)
+        package-quickstart    nil
+        package-quickstart-file nil))
+
 (when dysthesis/disable-package-el
-  ;; In Nix build we still want a writable user dir for caches, but keep
-  ;; config read-only from the store.
-  (let* ((store-dir (file-name-directory (or load-file-name buffer-file-name)))
-         (xdg-config (or (getenv "XDG_CONFIG_HOME")
-                         (expand-file-name "~/.config/")))
-         (nix-user-dir (file-name-as-directory
-                        (expand-file-name "emacs-nix" xdg-config))))
-    (setq user-emacs-directory nix-user-dir
-          ;; Keep loading init from the store copy.
-          user-init-file (expand-file-name "init.el" store-dir)
-          early-init-file (expand-file-name "early-init.el" store-dir)
-          package-user-dir (expand-file-name "elpa" user-emacs-directory)))
   ;; Prevent use-package from invoking package.el installers.
   (require 'seq)
   (let* ((deps (seq-find (lambda (p) (string-match "emacs-packages-deps" p))
                          load-path))
          (elpa (when deps (expand-file-name "elpa" deps))))
     (when elpa
-      (setq package-user-dir elpa)))
+      (setq package-user-dir package-user-dir)))
+  ;; Keep native-comp outputs in the Nix store and avoid runtime writes.
+  (when (getenv "JORMUNGANDR_ELN_DIR")
+    (require 'comp nil 'noerror)
+    (require 'startup nil 'noerror)
+    (let ((eln (getenv "JORMUNGANDR_ELN_DIR")))
+      (when (fboundp 'startup-redirect-eln-cache)
+        (startup-redirect-eln-cache eln)
+        ;; Keep only store eln path.
+        (setq native-comp-eln-load-path (list eln))))
+    (setq native-comp-jit-compilation nil
+          native-comp-deferred-compilation nil
+          native-comp-async-report-warnings-errors 'silent))
   (setq package-enable-at-startup t
         package-archives nil
         package-archive-priorities nil)

@@ -47,13 +47,53 @@
             ]);
         };
 
+        cfgWrapper = ''
+          export JORMUNGANDR_IMMUTABLE=1
+          export JORMUNGANDR_STATE_DIR=${"\${XDG_STATE_HOME:-$HOME/.local/state}"}/jormungandr
+        '';
+
+        jormungandr-eln-cache = pkgs.stdenv.mkDerivation {
+          pname = "jormungandr-eln-cache";
+          version = "0.1";
+          dontUnpack = true;
+          nativeBuildInputs = [
+            jormungandr-unwrapped
+            pkgs.coreutils
+            pkgs.findutils
+          ];
+          buildPhase = ''
+            runHook preBuild
+            export HOME=$TMPDIR
+            export XDG_CONFIG_HOME=$TMPDIR/.config
+            export XDG_STATE_HOME=$TMPDIR/.local/state
+            export JORMUNGANDR_IMMUTABLE=1
+            export JORMUNGANDR_STATE_DIR=$XDG_STATE_HOME/jormungandr
+            mkdir -p $out/share/emacs/native-lisp
+            ${jormungandr-unwrapped}/bin/emacs --batch \
+              --eval "(require 'comp)" \
+              --eval "(require 'use-package)" \
+              --eval "(setq use-package-always-ensure nil)" \
+              --eval "(setq native-compile-target-directory \"$out/share/emacs/native-lisp\")" \
+              --eval "(mapc #'native-compile '(\"${tangle}/early-init.el\" \"${tangle}/init.el\" \"${tangle}/themes/demiurge-theme.el\" \"${pkgs.emacs-unstable-pgtk}/share/emacs/site-lisp/site-start.el\"))"
+            runHook postBuild
+          '';
+          installPhase = ''
+            runHook preInstall
+            # native-compile wrote directly into $out
+            runHook postInstall
+          '';
+        };
+
         jormungandr = pkgs.symlinkJoin {
           name = "jormungandr";
-          paths = [jormungandr-unwrapped];
+          paths = [jormungandr-unwrapped jormungandr-eln-cache];
           nativeBuildInputs = [pkgs.makeWrapper];
           postBuild = ''
             wrapProgram $out/bin/emacs \
-              --set JORMUNGANDR_DISABLE_PACKAGE_EL 1
+              --set JORMUNGANDR_DISABLE_PACKAGE_EL 1 \
+              --set JORMUNGANDR_ELN_DIR "$out/share/emacs/native-lisp" \
+              --run ${pkgs.lib.escapeShellArg cfgWrapper} \
+              --add-flags "--init-directory ${tangle}"
           '';
         };
       in {
@@ -64,6 +104,7 @@
             tangle
             jormungandr
             jormungandr-unwrapped
+            jormungandr-eln-cache
             ;
         };
 
