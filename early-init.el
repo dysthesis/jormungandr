@@ -29,7 +29,7 @@
                                (expand-file-name "emacs" state-root))
         package-user-dir      (expand-file-name "elpa" user-emacs-directory)
         package-quickstart    nil
-        package-quickstart-file nil))
+        package-quickstart-file (expand-file-name "package-quickstart.el" user-emacs-directory)))
 (make-directory user-emacs-directory t)
 
 (unless dysthesis/package-el-enabled
@@ -55,9 +55,15 @@
         package-load-list nil
         package--init-file-ensured t)
   (require 'seq)
-  (let* ((deps-elpa (seq-find (lambda (p)
-                                (string-match "emacs-packages-deps/.*/share/emacs/site-lisp/elpa" p))
-                              load-path)))
+  (let* ((deps-elpa-entry (seq-find (lambda (p)
+                                      (string-match "emacs-packages-deps[^ ]*/share/emacs/site-lisp/elpa" p))
+                                    load-path))
+         (deps-elpa (cond
+                     ((not deps-elpa-entry) nil)
+                     ((string-match "/elpa/" deps-elpa-entry)
+                      (file-name-directory (directory-file-name deps-elpa-entry)))
+                     ((string-suffix-p "/elpa" deps-elpa-entry) deps-elpa-entry)
+                     (t deps-elpa-entry))))
     (setq package-directory-list
           (delete-dups (delq nil (list package-user-dir deps-elpa)))))
   (make-directory package-user-dir t)

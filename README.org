@@ -100,7 +100,7 @@ The flake sets =dysthesis/disable-package-el= to non-nil before loading this fil
                                (expand-file-name "emacs" state-root))
         package-user-dir      (expand-file-name "elpa" user-emacs-directory)
         package-quickstart    nil
-        package-quickstart-file nil))
+        package-quickstart-file (expand-file-name "package-quickstart.el" user-emacs-directory)))
 (make-directory user-emacs-directory t)
 
 (unless dysthesis/package-el-enabled
@@ -125,9 +125,15 @@ The flake sets =dysthesis/disable-package-el= to non-nil before loading this fil
         package-load-list nil
         package--init-file-ensured t)
   (require 'seq)
-  (let* ((deps-elpa (seq-find (lambda (p)
-                                (string-match "emacs-packages-deps/.*/share/emacs/site-lisp/elpa" p))
-                              load-path)))
+  (let* ((deps-elpa-entry (seq-find (lambda (p)
+                                      (string-match "emacs-packages-deps[^ ]*/share/emacs/site-lisp/elpa" p))
+                                    load-path))
+         (deps-elpa (cond
+                     ((not deps-elpa-entry) nil)
+                     ((string-match "/elpa/" deps-elpa-entry)
+                      (file-name-directory (directory-file-name deps-elpa-entry)))
+                     ((string-suffix-p "/elpa" deps-elpa-entry) deps-elpa-entry)
+                     (t deps-elpa-entry))))
     (setq package-directory-list
           (delete-dups (delq nil (list package-user-dir deps-elpa)))))
   (make-directory package-user-dir t)
@@ -206,6 +212,7 @@ Use [[https://gitlab.com/koral/gcmh][gcmh]] to manage garbage collection aggress
     :init
     (setq gcmh-idle-delay 'auto
           gcmh-auto-idle-delay-factor 10)
+    :config
     (gcmh-mode 1))
 #+end_src
 
@@ -427,9 +434,9 @@ Completion menu for minibuffer.
 #+begin_src emacs-lisp
   (use-package vertico
     :ensure t
-    :init
-    (vertico-mode)
     :config
+    (require 'vertico-multiform)
+    (vertico-mode)
     (vertico-multiform-mode)
     (add-to-list 'vertico-multiform-categories '(embark-bindings grid)))
 #+end_src
@@ -454,11 +461,11 @@ Sorting for completion menu items.
 *** Marginalia
 Add descriptions to each completion menu entry on the margins.
 #+begin_src emacs-lisp
-(use-package marginalia
-  :ensure t
-  :after vertico
-  :init
-  (marginalia-mode))
+  (use-package marginalia
+    :ensure t
+    :after vertico
+    :config
+    (marginalia-mode))
 #+end_src
 
 *** Nerd icons completion
@@ -648,7 +655,7 @@ A smaller, faster, and arguably better-designed alternative to Company for compl
     ;; `completion-at-point' is often bound to M-TAB.
     (tab-always-indent 'complete)
     (corfu-preview-current nil) ;; Don't insert completion without confirmation
-    :init
+    :config
     (global-corfu-mode))
 #+end_src
 
@@ -1117,6 +1124,9 @@ Magit, but for Jujutsu.
     (doom-themes-enable-bold t)   ; if nil, bold is universally disabled
     (doom-themes-enable-italic t) ; if nil, italics is universally disabled
     :config
+    (require 'doom-themes-ext-visual-bell nil t)
+    (require 'doom-themes-ext-treemacs nil t)
+    (require 'doom-themes-ext-org nil t)
     (load-theme 'doom-tomorrow-night t)
 
     ;; Enable flashing mode-line on errors
@@ -1135,7 +1145,8 @@ Magit, but for Jujutsu.
 #+begin_src emacs-lisp
   (use-package doom-modeline
     :ensure t
-    :init (doom-modeline-mode 1))
+    :config
+    (doom-modeline-mode 1))
 #+end_src
 *** Olivetti mode
 This package provides =olivetti-mode=, which centres text to provide a more readable writing environment for editing prose.

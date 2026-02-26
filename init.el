@@ -39,6 +39,7 @@
   :init
   (setq gcmh-idle-delay 'auto
         gcmh-auto-idle-delay-factor 10)
+  :config
   (gcmh-mode 1))
 
 (use-package emacs
@@ -151,9 +152,9 @@
 
 (use-package vertico
   :ensure t
-  :init
-  (vertico-mode)
   :config
+  (require 'vertico-multiform)
+  (vertico-mode)
   (vertico-multiform-mode)
   (add-to-list 'vertico-multiform-categories '(embark-bindings grid)))
 
@@ -173,7 +174,7 @@
 (use-package marginalia
   :ensure t
   :after vertico
-  :init
+  :config
   (marginalia-mode))
 
 (use-package nerd-icons-completion
@@ -334,7 +335,7 @@
   ;; `completion-at-point' is often bound to M-TAB.
   (tab-always-indent 'complete)
   (corfu-preview-current nil) ;; Don't insert completion without confirmation
-  :init
+  :config
   (global-corfu-mode))
 
 (use-package nerd-icons-corfu
@@ -716,6 +717,9 @@
   (doom-themes-enable-bold t)   ; if nil, bold is universally disabled
   (doom-themes-enable-italic t) ; if nil, italics is universally disabled
   :config
+  (require 'doom-themes-ext-visual-bell nil t)
+  (require 'doom-themes-ext-treemacs nil t)
+  (require 'doom-themes-ext-org nil t)
   (load-theme 'doom-tomorrow-night t)
 
   ;; Enable flashing mode-line on errors
@@ -731,7 +735,8 @@
 
 (use-package doom-modeline
   :ensure t
-  :init (doom-modeline-mode 1))
+  :config
+  (doom-modeline-mode 1))
 
 (use-package olivetti
   :ensure t
