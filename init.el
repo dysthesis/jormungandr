@@ -1,10 +1,8 @@
-(defconst dysthesis/immutable-config (getenv "JORMUNGANDR_IMMUTABLE"))
-
-(defconst dysthesis/state-dir user-emacs-directory)
-(defconst dysthesis/state-cache (expand-file-name "cache" dysthesis/state-dir))
-(make-directory dysthesis/state-cache t)
-(setq savehist-file (expand-file-name "history" dysthesis/state-cache)
-      auto-save-list-file-prefix (expand-file-name "auto-save-list/.saves-" dysthesis/state-dir))
+;; After site-start has populated `load-path`, pull in autoloads for all
+;; Nix-provided ELPA packages so commands like `consult-fd` are available
+;; without manual requires.
+(when (fboundp 'dysthesis/load-profile-autoloads)
+  (dysthesis/load-profile-autoloads))
 
 (use-package use-package
   :ensure t
@@ -20,19 +18,17 @@
   ;; Navigate use-package declarations w/imenu
   (use-package-enable-imenu-support t))
 
-;; Avoid runtime byte-compilation when immutability is requested.
-(unless dysthesis/immutable-config
-  (use-package auto-compile
-    :ensure t
-    :defer 1
-    :custom
-    (auto-compile-display-buffer nil)
-    (auto-compile-mode-line-counter nil)
-    (auto-compile-use-mode-line nil)
-    (auto-compile-update-autoloads t)
-    :config
-    (auto-compile-on-load-mode)
-    (auto-compile-on-save-mode)))
+(use-package auto-compile
+  :ensure t
+  :defer 1
+  :custom
+  (auto-compile-display-buffer nil)
+  (auto-compile-mode-line-counter nil)
+  (auto-compile-use-mode-line nil)
+  (auto-compile-update-autoloads t)
+  :config
+  (auto-compile-on-load-mode)
+  (auto-compile-on-save-mode))
 
 (use-package gcmh
   :ensure t
@@ -150,59 +146,15 @@
   (setopt display-time-interval 1)
   (display-time-mode))
 
-(use-package vertico
-  :ensure t
-  :config
-  (require 'vertico-multiform)
-  (vertico-mode)
-  (vertico-multiform-mode)
-  (add-to-list 'vertico-multiform-categories '(embark-bindings grid)))
-
-(use-package orderless
-  :ensure t
-  :custom
-  (completion-styles '(orderless basic))
-  (orderless-matching-styles
-   '(orderless-literal
-     orderless-prefixes
-     orderless-initialism
-     orderless-regexp
-     ;; Basically fuzzy finding
-     orderless-flex))
-  (completion-category-overrides '((file (styles basic partial-completion)))))
-
-(use-package marginalia
-  :ensure t
-  :after vertico
-  :config
-  (marginalia-mode))
-
-(use-package nerd-icons-completion
-:ensure t
-:after marginalia
-:config
-(nerd-icons-completion-mode)
-:hook
-(marginalia-mode . nerd-icons-completion-marginalia-setup))
-
-(use-package which-key
-  :after (vertico)
-  :ensure t
-  :config
-  (setq which-key-show-early-on-C-h t
-      which-key-idle-delay 1e6 ; 11 days
-      which-key-idle-secondary-delay 0.05)
-  (which-key-mode))
-
+;; Define the leader-key macro early so native compilation can expand it
+;; before any package configs run.
 (eval-and-compile
-  ;; Make leader macro available at compile- and load-time so downstream
-  ;; use-package forms can macroexpand it.
   (require 'general)
   (general-create-definer dysthesis/start/leader-keys
     :states '(normal insert visual motion emacs)
     :keymaps 'override
-    :prefix "SPC"
-    :global-prefix "C-SPC"))
+    :prefix "SPC"           ;; Set leader key
+    :global-prefix "C-SPC")) ;; Set global leader key
 
 (use-package general
   :ensure t
@@ -210,7 +162,6 @@
   :demand t
   :config
   (general-evil-setup)
-
   (dysthesis/start/leader-keys
     "." '(find-file :wk "Find file")
     "TAB" '(comment-line :wk "Comment lines")
@@ -268,6 +219,56 @@
     "t t" '(visual-line-mode :wk "Toggle truncated lines (wrap)")
     "t l" '(display-line-numbers-mode :wk "Toggle line numbers")))
 
+(use-package vertico
+  :ensure t
+  :functions (vertico-multiform-mode)
+  :config
+  (require 'vertico-multiform)
+  (vertico-mode)
+  (vertico-multiform-mode)
+  (add-to-list 'vertico-multiform-categories '(embark-bindings grid)))
+
+(use-package vertico-posframe
+  :ensure t
+  :after vertico
+  :config (vertico-posframe-mode 1))
+
+(use-package orderless
+  :ensure t
+  :custom
+  (completion-styles '(orderless basic))
+  (orderless-matching-styles
+   '(orderless-literal
+     orderless-prefixes
+     orderless-initialism
+     orderless-regexp
+     ;; Basically fuzzy finding
+     orderless-flex))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+
+(use-package marginalia
+  :ensure t
+  :after vertico
+  :config
+  (marginalia-mode))
+
+(use-package nerd-icons-completion
+:ensure t
+:after marginalia
+:config
+(nerd-icons-completion-mode)
+:hook
+(marginalia-mode . nerd-icons-completion-marginalia-setup))
+
+(use-package which-key
+  :after (vertico)
+  :ensure t
+  :config
+  (setq which-key-show-early-on-C-h t
+      which-key-idle-delay 1e6 ; 11 days
+      which-key-idle-secondary-delay 0.05)
+  (which-key-mode))
+
 (use-package embark
   :ensure t
   :bind
@@ -294,6 +295,7 @@
 
 (use-package consult
   :ensure t
+  :functions (consult-xref consult-register-window consult-register-format)
   :hook (completion-list-mode . consult-preview-at-point-mode)
   :init
   (setq register-preview-delay 0.5
@@ -346,6 +348,7 @@
 (use-package cape
   :ensure t
   :after corfu
+  :functions (cape-keyword)
   :init
   ;; Path completion
   (add-to-list 'completion-at-point-functions #'cape-file)
@@ -447,6 +450,8 @@
 
 (use-package treesit-auto
   :ensure t
+  :functions (treesit-auto-add-to-auto-mode-alist
+              global-treesit-auto-mode)
   :custom
   (treesit-auto-install 'prompt)
   :config
@@ -456,6 +461,25 @@
 (use-package evil-textobj-tree-sitter
   :ensure t
   :after (:and treesit evil)
+  :functions (evil-textobj-tree-sitter-get-textobj
+              evil-textobj-tree-sitter-goto-textobj
+              evil-textobj-tree-sitter-function--parameter.inner-call.inner
+              evil-textobj-tree-sitter-function--parameter.outer-call.outer
+              evil-textobj-tree-sitter-function--function.inner
+              evil-textobj-tree-sitter-function--function.outer
+              evil-textobj-tree-sitter-function--call.inner
+              evil-textobj-tree-sitter-function--call.outer
+              evil-textobj-tree-sitter-function--class.inner
+              evil-textobj-tree-sitter-function--class.outer
+              evil-textobj-tree-sitter-function--comment.outer
+              evil-textobj-tree-sitter-function--conditional.inner
+              evil-textobj-tree-sitter-function--conditional.outer
+              evil-textobj-tree-sitter-function--loop.inner
+              evil-textobj-tree-sitter-function--loop.outer)
+  :preface
+  (eval-and-compile
+    (require 'evil)
+    (require 'evil-textobj-tree-sitter))
   :config
   (defvar dysthesis/tree-sitter-inner-text-objects-map (make-sparse-keymap))
   (defvar dysthesis/tree-sitter-outer-text-objects-map (make-sparse-keymap))
@@ -587,11 +611,12 @@
             (lambda ()
               (add-hook 'before-save-hook 'eglot-format nil t))))
 
-(when (executable-find "emacs-lsp-booster")
-  (use-package eglot-booster
-      :ensure nil
-      :after eglot
-      :config (eglot-booster-mode)))
+(use-package eglot-booster
+  :ensure nil
+  :after eglot
+  :commands (eglot-booster-mode)
+  :if (and (not noninteractive) (executable-find "emacs-lsp-booster"))
+  :config (eglot-booster-mode))
 
 (use-package consult-eglot
   :ensure t
@@ -608,9 +633,6 @@
 (use-package dape
   :ensure t
   :preface
-  (defconst dysthesis/dape-breakpoint-file
-    (expand-file-name "dape/breakpoints" dysthesis/state-dir))
-  (make-directory (file-name-directory dysthesis/dape-breakpoint-file) t)
   (defun dysthesis/dape--codelldb-dir-default ()
     "Compute the codelldb adapter directory from the environment."
     (let ((dir (getenv "CODELLDB_DIR")))
@@ -678,14 +700,10 @@
   (add-hook 'dape-start-hook (lambda () (save-some-buffers t t)))
 
   ;; Kill compile buffer on build success
-  (add-hook 'dape-compile-hook #'kill-buffer)
-
-  ;; Persist breakpoints to state dir instead of store/home.
-  (setq dape-breakpoint-file dysthesis/dape-breakpoint-file))
+  (add-hook 'dape-compile-hook #'kill-buffer))
 
 ;; For a more ergonomic Emacs and `dape' experience
 (use-package repeat
-  :ensure t
   :custom
   (repeat-mode +1))
 
@@ -712,15 +730,23 @@
 
 (use-package doom-themes
   :ensure t
+  :functions (doom-themes-visual-bell-config
+              doom-themes-treemacs-config
+              doom-themes-org-config)
   :custom
   ;; Global settings (defaults)
   (doom-themes-enable-bold t)   ; if nil, bold is universally disabled
   (doom-themes-enable-italic t) ; if nil, italics is universally disabled
   :config
+  (let* ((theme-dir (or (getenv "JORMUNGANDR_THEME_DIR")
+                        (expand-file-name "themes"
+                                          (file-name-directory (or load-file-name user-init-file))))))
+    (when (file-directory-p theme-dir)
+      (add-to-list 'custom-theme-load-path theme-dir)))
   (require 'doom-themes-ext-visual-bell nil t)
   (require 'doom-themes-ext-treemacs nil t)
   (require 'doom-themes-ext-org nil t)
-  (load-theme 'doom-tomorrow-night t)
+  (load-theme 'compline t)
 
   ;; Enable flashing mode-line on errors
   (doom-themes-visual-bell-config)
@@ -876,17 +902,3 @@
   (when buffer-file-name
     (setq-local buffer-save-without-query t))
   (add-hook 'before-save-hook 'lsp-format-buffer nil t))
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-selected-packages nil)
- '(package-vc-selected-packages nil))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(fixed-pitch ((t (:family "JBMono Nerd Font" :height 130))))
- '(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height 130)))))

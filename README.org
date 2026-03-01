@@ -561,6 +561,14 @@ Completion menu for minibuffer.
   (add-to-list 'vertico-multiform-categories '(embark-bindings grid)))
 #+end_src
 
+Furthermore, we also want the Vertico menu to be centred in the frame, such that it is always focused on our sight.
+#+begin_src emacs-lisp
+  (use-package vertico-posframe
+    :ensure t
+    :after vertico
+    :config (vertico-posframe-mode 1))
+#+end_src
+
 *** Orderless
 Sorting for completion menu items.
 #+begin_src emacs-lisp
@@ -989,16 +997,20 @@ First, we port over some LSP-related optimisations that were made in Doom Emacs.
 
 Then, we configure Eglot itself.
 #+begin_src emacs-lisp :tangle init.el
-     (use-package eglot
-       :defer t
-       :hook ((prog-mode . (lambda ()
-    			 (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
-   			   (eglot-ensure))))
-  	    (eglot-managed-mode . +lsp-optimisation-mode))
-       :custom
-       (eglot-sync-connect 1)
-       (eglot-autoshutdown t)
-       (eglot-auto-display-help-buffer nil)
+  (use-package eglot
+    :defer t
+    :hook ((prog-mode . (lambda ()
+		       (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
+		 (eglot-ensure))))
+	    (eglot-managed-mode . +lsp-optimisation-mode))
+    :custom
+    (eglot-sync-connect 1)
+    ;; Shutting down servers synchronously on every buffer kill was
+    ;; causing noticeable pauses when using :q, especially with nixd and
+    ;; rust-analyzer. Keep servers alive; shut them down manually when
+    ;; needed (e.g. `M-x eglot-shutdown-all`).
+    (eglot-autoshutdown nil)
+    (eglot-auto-display-help-buffer nil)
        :config
        <<eglot-keybinds>>
        <<eglot-server-programs>>
