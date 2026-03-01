@@ -1000,21 +1000,22 @@ Then, we configure Eglot itself.
   (use-package eglot
     :defer t
     :hook ((prog-mode . (lambda ()
-		       (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
-		 (eglot-ensure))))
-	    (eglot-managed-mode . +lsp-optimisation-mode))
+  		       (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
+  		 (eglot-ensure))))
+  	    (eglot-managed-mode . +lsp-optimisation-mode))
     :custom
-    (eglot-sync-connect 1)
-    ;; Shutting down servers synchronously on every buffer kill was
-    ;; causing noticeable pauses when using :q, especially with nixd and
-    ;; rust-analyzer. Keep servers alive; shut them down manually when
-    ;; needed (e.g. `M-x eglot-shutdown-all`).
-    (eglot-autoshutdown nil)
     (eglot-auto-display-help-buffer nil)
-       :config
-       <<eglot-keybinds>>
-       <<eglot-server-programs>>
-       <<eglot-format-on-save>>)
+    <<eglot-disable-lsp-autoshutdown>>
+    :config
+    <<eglot-keybinds>>
+    <<eglot-server-programs>>
+    <<eglot-format-on-save>>)
+#+end_src
+
+We also want to disable the automatic shutdown of LSP servers. Doing so synchronously on every buffer kill causes noticeable latency when killing buffers (e.g. on =:q=). Disabling this will keep the servers alive even after the termination of the buffers. They can stil be terminated manually, /e.g./ when running =eglot-shutdown-all=.
+#+name: eglot-disable-lsp-autoshudown
+#+begin_src emacs-lisp
+      (eglot-autoshutdown nil)
 #+end_src
 
 And we use LSP booster to speed up RPC between Emacs and the LSP.

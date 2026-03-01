@@ -41,8 +41,9 @@
           # Extra packages that aren't discoverable via :ensure or need pinning.
           extraEmacsPackages = epkgs:
             (vcPackagesFor epkgs)
-            ++ (with pkgs; [
-              epkgs.nerd-icons
+            ++ (with epkgs; [
+              nerd-icons
+              treesit-grammars.with-all-grammars
             ]);
         };
 
