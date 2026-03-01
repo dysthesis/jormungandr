@@ -589,27 +589,31 @@
 (use-package eglot
   :defer t
   :hook ((prog-mode . (lambda ()
-			 (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
-			   (eglot-ensure))))
+		       (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
+		 (eglot-ensure))))
 	    (eglot-managed-mode . +lsp-optimisation-mode))
   :custom
   (eglot-sync-connect 1)
-  (eglot-autoshutdown t)
+  ;; Shutting down servers synchronously on every buffer kill was
+  ;; causing noticeable pauses when using :q, especially with nixd and
+  ;; rust-analyzer. Keep servers alive; shut them down manually when
+  ;; needed (e.g. `M-x eglot-shutdown-all`).
+  (eglot-autoshutdown nil)
   (eglot-auto-display-help-buffer nil)
-  :config
-  (dysthesis/start/leader-keys
-   "c" '(:ignore t :which-key "Code")
-   "c <escape>" '(keyboard-escape-quit :which-key t)
-   "c r" '(eglot-rename :which-key "Rename")
-   "c a" '(eglot-code-actions :which-key "Actions"))
-  (with-eval-after-load 'eglot
-    (dolist (mode '((nix-mode . ("nixd"))
-                    ((rust-ts-mode rust-mode) . ("rust-analyzer"
-  					       :initializationOptions (:check (:command "clippy"))))))
-      (add-to-list 'eglot-server-programs mode)))
-  (add-hook 'prog-mode-hook
-            (lambda ()
-              (add-hook 'before-save-hook 'eglot-format nil t))))
+     :config
+     (dysthesis/start/leader-keys
+      "c" '(:ignore t :which-key "Code")
+      "c <escape>" '(keyboard-escape-quit :which-key t)
+      "c r" '(eglot-rename :which-key "Rename")
+      "c a" '(eglot-code-actions :which-key "Actions"))
+     (with-eval-after-load 'eglot
+       (dolist (mode '((nix-mode . ("nixd"))
+                       ((rust-ts-mode rust-mode) . ("rust-analyzer"
+     					       :initializationOptions (:check (:command "clippy"))))))
+         (add-to-list 'eglot-server-programs mode)))
+     (add-hook 'prog-mode-hook
+               (lambda ()
+                 (add-hook 'before-save-hook 'eglot-format nil t))))
 
 (use-package eglot-booster
   :ensure nil
