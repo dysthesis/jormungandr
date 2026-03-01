@@ -843,7 +843,10 @@
   (global-ligature-mode t))
 
 (use-package org
-  :after (olivetti))
+  :after (olivetti)
+  :config
+  (dysthesis/start/leader-keys
+    "f h" '(consult-org-heading :wk "[F]ind [H]eadings")))
 
 (use-package org-modern
   :ensure t

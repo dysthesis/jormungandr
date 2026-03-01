@@ -1331,7 +1331,10 @@ Highlight colour codes with the corresponding colour in order to visualise them 
 *** Org
 #+begin_src emacs-lisp
   (use-package org
-    :after (olivetti))
+    :after (olivetti)
+    :config
+    (dysthesis/start/leader-keys
+      "f h" '(consult-org-heading :wk "[F]ind [H]eadings")))
 #+end_src
 
 **** Org-modern
