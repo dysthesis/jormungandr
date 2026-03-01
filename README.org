@@ -1168,10 +1168,15 @@ Magit, but for Jujutsu.
     (doom-themes-enable-bold t)   ; if nil, bold is universally disabled
     (doom-themes-enable-italic t) ; if nil, italics is universally disabled
     :config
+    (let* ((theme-dir (or (getenv "JORMUNGANDR_THEME_DIR")
+                          (expand-file-name "themes"
+                                            (file-name-directory (or load-file-name user-init-file))))))
+      (when (file-directory-p theme-dir)
+        (add-to-list 'custom-theme-load-path theme-dir)))
     (require 'doom-themes-ext-visual-bell nil t)
     (require 'doom-themes-ext-treemacs nil t)
     (require 'doom-themes-ext-org nil t)
-    (load-theme 'doom-tomorrow-night t)
+    (load-theme 'compline t)
 
     ;; Enable flashing mode-line on errors
     (doom-themes-visual-bell-config)

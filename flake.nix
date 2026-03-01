@@ -67,13 +67,25 @@
             export XDG_STATE_HOME=$TMPDIR/.local/state
             export JORMUNGANDR_IMMUTABLE=1
             export JORMUNGANDR_STATE_DIR=$XDG_STATE_HOME/jormungandr
-            mkdir -p $out/share/emacs/native-lisp
-            ${jormungandr-unwrapped}/bin/emacs --batch \
-              --eval "(require 'comp)" \
-              --eval "(require 'use-package)" \
-              --eval "(setq use-package-always-ensure nil)" \
-              --eval "(setq native-compile-target-directory \"$out/share/emacs/native-lisp\")" \
-              --eval "(mapc #'native-compile '(\"${tangle}/early-init.el\" \"${tangle}/init.el\" \"${tangle}/themes/demiurge-theme.el\" \"${pkgs.emacs-unstable-pgtk}/share/emacs/site-lisp/site-start.el\"))"
+            theme_dir="$out/share/emacs/site-lisp/themes"
+            native_dir="$out/share/emacs/native-lisp"
+
+            mkdir -p "$theme_dir" "$native_dir"
+            cp -r ${tangle}/themes/. "$theme_dir/"
+
+            THEME_DIR="$theme_dir" NATIVE_DIR="$native_dir" ${jormungandr-unwrapped}/bin/emacs --batch <<'EOF'
+(require 'comp)
+(require 'use-package)
+(setq use-package-always-ensure nil)
+(let* ((native-compile-target-directory (getenv "NATIVE_DIR"))
+       (theme-dir (getenv "THEME_DIR"))
+       (files (list "${tangle}/early-init.el"
+                    "${tangle}/init.el"
+                    "${pkgs.emacs-unstable-pgtk}/share/emacs/site-lisp/site-start.el")))
+  (when (and theme-dir (file-directory-p theme-dir))
+    (setq files (nconc files (directory-files-recursively theme-dir "\\.el\\'"))))
+  (mapc #'native-compile files))
+EOF
             runHook postBuild
           '';
           installPhase = ''
@@ -94,6 +106,7 @@
               wrapProgram $out/bin/emacs \
                 --set JORMUNGANDR_DISABLE_PACKAGE_EL 1 \
                 --set JORMUNGANDR_ELN_DIR "$out/share/emacs/native-lisp" \
+                --set JORMUNGANDR_THEME_DIR "$out/share/emacs/site-lisp/themes" \
                 --run ${pkgs.lib.escapeShellArg cfgWrapper} \
                 --add-flags "--init-directory ${tangle}" \
                 --prefix PATH ":" "${pkgs.lib.makeBinPath deps}"
