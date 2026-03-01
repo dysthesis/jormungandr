@@ -551,13 +551,14 @@ A package which provides a nicer keybinding definition interface.
 *** Vertico
 Completion menu for minibuffer.
 #+begin_src emacs-lisp
-  (use-package vertico
-    :ensure t
-    :config
-    (require 'vertico-multiform)
-    (vertico-mode)
-    (vertico-multiform-mode)
-    (add-to-list 'vertico-multiform-categories '(embark-bindings grid)))
+(use-package vertico
+  :ensure t
+  :functions (vertico-multiform-mode)
+  :config
+  (require 'vertico-multiform)
+  (vertico-mode)
+  (vertico-multiform-mode)
+  (add-to-list 'vertico-multiform-categories '(embark-bindings grid)))
 #+end_src
 
 *** Orderless
@@ -648,6 +649,7 @@ Provide some integrations with Consult.
 #+begin_src emacs-lisp
   (use-package consult
     :ensure t
+    :functions (consult-xref consult-register-window consult-register-format)
     :hook (completion-list-mode . consult-preview-at-point-mode)
     :init
     (setq register-preview-delay 0.5
@@ -717,6 +719,7 @@ Short for "Completion At Point Extensions".
   (use-package cape
     :ensure t
     :after corfu
+    :functions (cape-keyword)
     :init
     ;; Path completion
     (add-to-list 'completion-at-point-functions #'cape-file)
@@ -834,6 +837,8 @@ Automatic delimiter pairing, navigation, and editing.
 
   (use-package treesit-auto
     :ensure t
+    :functions (treesit-auto-add-to-auto-mode-alist
+                global-treesit-auto-mode)
     :custom
     (treesit-auto-install 'prompt)
     :config
@@ -846,6 +851,25 @@ Automatic delimiter pairing, navigation, and editing.
   (use-package evil-textobj-tree-sitter
     :ensure t
     :after (:and treesit evil)
+    :functions (evil-textobj-tree-sitter-get-textobj
+                evil-textobj-tree-sitter-goto-textobj
+                evil-textobj-tree-sitter-function--parameter.inner-call.inner
+                evil-textobj-tree-sitter-function--parameter.outer-call.outer
+                evil-textobj-tree-sitter-function--function.inner
+                evil-textobj-tree-sitter-function--function.outer
+                evil-textobj-tree-sitter-function--call.inner
+                evil-textobj-tree-sitter-function--call.outer
+                evil-textobj-tree-sitter-function--class.inner
+                evil-textobj-tree-sitter-function--class.outer
+                evil-textobj-tree-sitter-function--comment.outer
+                evil-textobj-tree-sitter-function--conditional.inner
+                evil-textobj-tree-sitter-function--conditional.outer
+                evil-textobj-tree-sitter-function--loop.inner
+                evil-textobj-tree-sitter-function--loop.outer)
+    :preface
+    (eval-and-compile
+      (require 'evil)
+      (require 'evil-textobj-tree-sitter))
     :config
     (defvar dysthesis/tree-sitter-inner-text-objects-map (make-sparse-keymap))
     (defvar dysthesis/tree-sitter-outer-text-objects-map (make-sparse-keymap))
@@ -983,11 +1007,12 @@ Then, we configure Eglot itself.
 
 And we use LSP booster to speed up RPC between Emacs and the LSP.
 #+begin_src emacs-lisp :tangle init.el
-  (when (executable-find "emacs-lsp-booster")
-    (use-package eglot-booster
-        :ensure nil
-        :after eglot
-        :config (eglot-booster-mode)))
+  (use-package eglot-booster
+    :ensure nil
+    :after eglot
+    :commands (eglot-booster-mode)
+    :if (and (not noninteractive) (executable-find "emacs-lsp-booster"))
+    :config (eglot-booster-mode))
 #+end_src
 
 **** Keybindings
@@ -1163,6 +1188,9 @@ Magit, but for Jujutsu.
 #+begin_src emacs-lisp
   (use-package doom-themes
     :ensure t
+    :functions (doom-themes-visual-bell-config
+                doom-themes-treemacs-config
+                doom-themes-org-config)
     :custom
     ;; Global settings (defaults)
     (doom-themes-enable-bold t)   ; if nil, bold is universally disabled

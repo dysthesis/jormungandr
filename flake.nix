@@ -146,8 +146,7 @@ EOF
 
         checks = {
           inherit tangle;
-          emacs-smoke =
-            pkgs.runCommand "emacs-smoke" {
+          smoke-test = pkgs.runCommand "emacs-smoke" {
               buildInputs = [self.packages.${system}.jormungandr];
             } ''
               export HOME=$TMPDIR
