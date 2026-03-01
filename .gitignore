@@ -1,2 +1,15 @@
+history
+projects
+transient/
+elpa/
+emacs-backup/
+eln-cache/
+auto-save-list/
+elpagnupg/
+elpaca/
+.org-id-locations
+tree-sitter/
+tramp
+dape-breakpoints
 .direnv/
 result

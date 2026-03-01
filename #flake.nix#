@@ -83,22 +83,19 @@
           '';
         };
 
-        jormungandr = let
-          deps = with pkgs; [emacs-lsp-booster];
-        in
-          pkgs.symlinkJoin {
-            name = "jormungandr";
-            paths = [jormungandr-unwrapped jormungandr-eln-cache];
-            nativeBuildInputs = [pkgs.makeWrapper];
-            postBuild = ''
-              wrapProgram $out/bin/emacs \
-                --set JORMUNGANDR_DISABLE_PACKAGE_EL 1 \
-                --set JORMUNGANDR_ELN_DIR "$out/share/emacs/native-lisp" \
-                --run ${pkgs.lib.escapeShellArg cfgWrapper} \
-                --add-flags "--init-directory ${tangle}" \
-                --prefix PATH ":" "${pkgs.lib.makeBinPath deps}"
-            '';
-          };
+        jormungandr = pkgs.symlinkJoin {
+          name = "jormungandr";
+          paths = [jormungandr-unwrapped jormungandr-eln-cache];
+          nativeBuildInputs = [pkgs.makeWrapper];
+          postBuild = ''
+            wrapProgram $out/bin/emacs \
+              --set JORMUNGANDR_DISABLE_PACKAGE_EL 1 \
+              --set JORMUNGANDR_ELN_DIR "$out/share/emacs/native-lisp" \
+              --run ${pkgs.lib.escapeShellArg cfgWrapper} \
+              --add-flags "--init-directory ${tangle}" \
+              -- 
+          '';
+        };
       in {
         _module.args.pkgs = pkgs;
 
@@ -132,7 +129,7 @@
         };
 
         checks = {
-          inherit tangle;
+          tangle = tangle;
           emacs-smoke =
             pkgs.runCommand "emacs-smoke" {
               buildInputs = [self.packages.${system}.jormungandr];
