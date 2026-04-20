@@ -1,0 +1,25 @@
+diff --git a/majutsu-template.el b/majutsu-template.el
+index 7140958..8487138 100644
+--- a/majutsu-template.el
++++ b/majutsu-template.el
+@@ -183,8 +183,9 @@ BODY should return a lowered form or a final template node.
+ 
+ ;;;; Type and callable metadata
+ 
+-(cl-defstruct (majutsu-template--type
+-               (:constructor majutsu-template--make-type))
++(eval-and-compile
++  (cl-defstruct (majutsu-template--type
++                 (:constructor majutsu-template--make-type))
+   "Metadata describing a template value type."
+   name
+   doc
+@@ -501,7 +502,7 @@ BODY should return a lowered form or a final template node.
+                    (majutsu-template--resolve-return-type-ref receiver-type arg-type))
+                   (cadr return-type))
+           (majutsu-template--resolve-return-type-ref receiver-type (caddr return-type))))
+-   (t return-type)))
++   (t return-type))))
+ 
+ (eval-and-compile
+   (cl-defstruct (majutsu-template--arg

@@ -1,0 +1,58 @@
+{
+  "pins": {
+    "eglot-booster": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "jdtsmith",
+        "repo": "eglot-booster"
+      },
+      "branch": "main",
+      "submodules": false,
+      "revision": "cab7803c4f0adc7fff9da6680f90110674bb7a22",
+      "url": "https://github.com/jdtsmith/eglot-booster/archive/cab7803c4f0adc7fff9da6680f90110674bb7a22.tar.gz",
+      "hash": "sha256-xUBQrQpw+JZxcqT1fy/8C2tjKwa7sLFHXamBm45Fa4Y="
+    },
+    "lackluster-theme": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "dysthesis",
+        "repo": "lackluster-theme"
+      },
+      "branch": "main",
+      "submodules": false,
+      "revision": "281eeea4ad61c762b099b72456550cd18f99e7ee",
+      "url": "https://github.com/dysthesis/lackluster-theme/archive/281eeea4ad61c762b099b72456550cd18f99e7ee.tar.gz",
+      "hash": "sha256-NWhfy7UmkAlmY5GQu+K0g/B+l667+T4yyCO/94JGScg="
+    },
+    "majutsu": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "0WD0",
+        "repo": "majutsu"
+      },
+      "branch": "main",
+      "submodules": false,
+      "revision": "2ab2adb7db8d379bdf2177901db7bcadfc9677d1",
+      "url": "https://github.com/0WD0/majutsu/archive/2ab2adb7db8d379bdf2177901db7bcadfc9677d1.tar.gz",
+      "hash": "sha256-JPU5RLUhE4VdjuoHnpfhwfJpmNqlzR35wekileSgEUI="
+    },
+    "nael": {
+      "type": "Git",
+      "repository": {
+        "type": "Forgejo",
+        "server": "https://codeberg.org/",
+        "owner": "mekeor",
+        "repo": "nael"
+      },
+      "branch": "release",
+      "submodules": false,
+      "revision": "c1d349746731bbff6bf1887c51eb7a1f3bea5c4c",
+      "url": "https://codeberg.org/mekeor/nael/archive/c1d349746731bbff6bf1887c51eb7a1f3bea5c4c.tar.gz",
+      "hash": "sha256-X3yw0pBgUN71TdPcEPznjq//U5X8P+zctik3nw11RSI="
+    }
+  },
+  "version": 7
+}

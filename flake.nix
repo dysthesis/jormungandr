@@ -62,32 +62,31 @@
             pkgs.findutils
           ];
           buildPhase = ''
-            runHook preBuild
-            export HOME=$TMPDIR
-            export XDG_CONFIG_HOME=$TMPDIR/.config
-            export XDG_STATE_HOME=$TMPDIR/.local/state
-            export JORMUNGANDR_IMMUTABLE=1
-            export JORMUNGANDR_STATE_DIR=$XDG_STATE_HOME/jormungandr
-            theme_dir="$out/share/emacs/site-lisp/themes"
-            native_dir="$out/share/emacs/native-lisp"
+                        runHook preBuild
+                        export HOME=$TMPDIR
+                        export XDG_CONFIG_HOME=$TMPDIR/.config
+                        export XDG_STATE_HOME=$TMPDIR/.local/state
+                        export JORMUNGANDR_IMMUTABLE=1
+                        export JORMUNGANDR_STATE_DIR=$XDG_STATE_HOME/jormungandr
+                        theme_dir="$out/share/emacs/site-lisp/themes"
+                        native_dir="$out/share/emacs/native-lisp"
 
-            mkdir -p "$theme_dir" "$native_dir"
-            cp -r ${tangle}/themes/. "$theme_dir/"
+                        mkdir -p "$theme_dir" "$native_dir"
 
-            THEME_DIR="$theme_dir" NATIVE_DIR="$native_dir" ${jormungandr-unwrapped}/bin/emacs --batch <<'EOF'
-(require 'comp)
-(require 'use-package)
-(setq use-package-always-ensure nil)
-(let* ((native-compile-target-directory (getenv "NATIVE_DIR"))
-       (theme-dir (getenv "THEME_DIR"))
-       (files (list "${tangle}/early-init.el"
-                    "${tangle}/init.el"
-                    "${pkgs.emacs-unstable-pgtk}/share/emacs/site-lisp/site-start.el")))
-  (when (and theme-dir (file-directory-p theme-dir))
-    (setq files (nconc files (directory-files-recursively theme-dir "\\.el\\'"))))
-  (mapc #'native-compile files))
-EOF
-            runHook postBuild
+                        THEME_DIR="$theme_dir" NATIVE_DIR="$native_dir" ${jormungandr-unwrapped}/bin/emacs --batch <<'EOF'
+            (require 'comp)
+            (require 'use-package)
+            (setq use-package-always-ensure nil)
+            (let* ((native-compile-target-directory (getenv "NATIVE_DIR"))
+                   (theme-dir (getenv "THEME_DIR"))
+                   (files (list "${tangle}/early-init.el"
+                                "${tangle}/init.el"
+                                "${pkgs.emacs-unstable-pgtk}/share/emacs/site-lisp/site-start.el")))
+              (when (and theme-dir (file-directory-p theme-dir))
+                (setq files (nconc files (directory-files-recursively theme-dir "\\.el\\'"))))
+              (mapc #'native-compile files))
+            EOF
+                        runHook postBuild
           '';
           installPhase = ''
             runHook preInstall
@@ -133,14 +132,26 @@ EOF
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
-            self.packages.${system}.jormungandr
-
             nixd
             nil
+            npins
             rust-analyzer
             direnv
             just
-            statix
+            # FIXME: remove on new release of statix
+            (statix.overrideAttrs (_o: rec {
+              src = fetchFromGitHub {
+                owner = "oppiliappan";
+                repo = "statix";
+                rev = "43681f0da4bf1cc6ecd487ef0a5c6ad72e3397c7";
+                hash = "sha256-LXvbkO/H+xscQsyHIo/QbNPw2EKqheuNjphdLfIZUv4=";
+              };
+
+              cargoDeps = pkgs.rustPlatform.importCargoLock {
+                lockFile = src + "/Cargo.lock";
+                allowBuiltinFetchGit = true;
+              };
+            }))
             deadnix
             alejandra
           ];
@@ -148,7 +159,8 @@ EOF
 
         checks = {
           inherit tangle;
-          smoke-test = pkgs.runCommand "emacs-smoke" {
+          smoke-test =
+            pkgs.runCommand "emacs-smoke" {
               buildInputs = [self.packages.${system}.jormungandr];
             } ''
               export HOME=$TMPDIR

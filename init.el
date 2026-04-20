@@ -735,36 +735,19 @@
   (dysthesis/start/leader-keys
   "g j" '(majutsu :wk "Majutsu")))
 
-(use-package doom-themes
+(use-package lackluster-theme
   :ensure t
-  :functions (doom-themes-visual-bell-config
-              doom-themes-treemacs-config
-              doom-themes-org-config)
-  :custom
-  ;; Global settings (defaults)
-  (doom-themes-enable-bold t)   ; if nil, bold is universally disabled
-  (doom-themes-enable-italic t) ; if nil, italics is universally disabled
-  :config
-  (let* ((theme-dir (or (getenv "JORMUNGANDR_THEME_DIR")
-                        (expand-file-name "themes"
-                                          (file-name-directory (or load-file-name user-init-file))))))
-    (when (file-directory-p theme-dir)
-      (add-to-list 'custom-theme-load-path theme-dir)))
-  (require 'doom-themes-ext-visual-bell nil t)
-  (require 'doom-themes-ext-treemacs nil t)
-  (require 'doom-themes-ext-org nil t)
-  (load-theme 'compline t)
+  :config (load-theme 'lackluster-night t))
 
-  ;; Enable flashing mode-line on errors
-  (doom-themes-visual-bell-config)
-  ;; or for treemacs users
-  (doom-themes-treemacs-config)
-  ;; Corrects (and improves) org-mode's native fontification.
-  (doom-themes-org-config))
 (use-package solaire-mode
- :ensure t
- :config
- (solaire-global-mode +1))
+  :ensure t
+  :after (lackluster-theme)
+  :config
+  (setq solaire-mode-supported-themes
+        '(lackluster lackluster-dark lackluster-hack lackluster-mint lackluster-night))
+  (when-let ((theme (car custom-enabled-themes)))
+    (solaire-mode--prepare-for-theme-a theme))
+  (solaire-global-mode +1))
 
 (use-package doom-modeline
   :ensure t
