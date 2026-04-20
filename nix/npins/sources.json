@@ -22,9 +22,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "281eeea4ad61c762b099b72456550cd18f99e7ee",
-      "url": "https://github.com/dysthesis/lackluster-theme/archive/281eeea4ad61c762b099b72456550cd18f99e7ee.tar.gz",
-      "hash": "sha256-NWhfy7UmkAlmY5GQu+K0g/B+l667+T4yyCO/94JGScg="
+      "revision": "5ed2d03ce6047148ceba9b951f74726636030e0f",
+      "url": "https://github.com/dysthesis/lackluster-theme/archive/5ed2d03ce6047148ceba9b951f74726636030e0f.tar.gz",
+      "hash": "sha256-DvzmhfG6wqZbRV+12L9S+EvlIL2gTlFS7d09oiqm9Rs="
     },
     "majutsu": {
       "type": "Git",

@@ -1217,7 +1217,9 @@ Magit, but for Jujutsu.
 #+begin_src emacs-lisp
   (use-package lackluster-theme
     :ensure nil
-    :config (load-theme 'lackluster-night t))
+    :config
+    (setq lackluster-theme-pure-black-white t)
+    (load-theme 'lackluster-night t))
   (use-package solaire-mode
     :ensure t
     :after (lackluster-theme)
