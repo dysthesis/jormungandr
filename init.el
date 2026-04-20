@@ -47,13 +47,21 @@
   (tooltip-mode -1)           ; Disable tooltips
   (set-fringe-mode 10)        ; Give some breathing room
   (menu-bar-mode -1)          ; Disable the menu bar
-  (set-face-attribute 'default nil :font "JBMono Nerd Font" :height 130)
-  (set-fontset-font t nil (font-spec :size 20 :name "JBMono Nerd Font"))
-  (setq-default line-spacing 0.2)
-  (custom-theme-set-faces
-   'user
-   '(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height 130))))
-   '(fixed-pitch ((t ( :family "JBMono Nerd Font" :height 130)))))
+  (let* ((font-size
+          (let* ((hostname (car (split-string (system-name) "\\." t)))
+                 (size-by-hostname '(("deimos" . 9)
+          			     ("phobos" . 13)))
+                 (default-size 9))
+            (or (cdr (assoc hostname size-by-hostname))
+                default-size)))
+        (font-height (* font-size 10)))
+    (set-face-attribute 'default nil :font "JBMono Nerd Font" :height font-height)
+    (set-fontset-font t nil (font-spec :size font-size :name "JBMono Nerd Font"))
+    (setq-default line-spacing 0.2)
+    (custom-theme-set-faces
+     'user
+     `(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height ,font-height))))
+     `(fixed-pitch ((t (:family "JBMono Nerd Font" :height ,font-height))))))
   (add-to-list 'face-font-rescale-alist '("Atkinson Hyperlegible Next" . 1.2))
   (setopt inhibit-splash-screen t)
   (setopt initial-major-mode 'fundamental-mode)
@@ -593,27 +601,22 @@
 		 (eglot-ensure))))
 	    (eglot-managed-mode . +lsp-optimisation-mode))
   :custom
-  (eglot-sync-connect 1)
-  ;; Shutting down servers synchronously on every buffer kill was
-  ;; causing noticeable pauses when using :q, especially with nixd and
-  ;; rust-analyzer. Keep servers alive; shut them down manually when
-  ;; needed (e.g. `M-x eglot-shutdown-all`).
-  (eglot-autoshutdown nil)
   (eglot-auto-display-help-buffer nil)
-     :config
-     (dysthesis/start/leader-keys
-      "c" '(:ignore t :which-key "Code")
-      "c <escape>" '(keyboard-escape-quit :which-key t)
-      "c r" '(eglot-rename :which-key "Rename")
-      "c a" '(eglot-code-actions :which-key "Actions"))
-     (with-eval-after-load 'eglot
-       (dolist (mode '((nix-mode . ("nixd"))
-                       ((rust-ts-mode rust-mode) . ("rust-analyzer"
-     					       :initializationOptions (:check (:command "clippy"))))))
-         (add-to-list 'eglot-server-programs mode)))
-     (add-hook 'prog-mode-hook
-               (lambda ()
-                 (add-hook 'before-save-hook 'eglot-format nil t))))
+  
+  :config
+  (dysthesis/start/leader-keys
+   "c" '(:ignore t :which-key "Code")
+   "c <escape>" '(keyboard-escape-quit :which-key t)
+   "c r" '(eglot-rename :which-key "Rename")
+   "c a" '(eglot-code-actions :which-key "Actions"))
+  (with-eval-after-load 'eglot
+    (dolist (mode '((nix-mode . ("nixd"))
+                    ((rust-ts-mode rust-mode) . ("rust-analyzer"
+  					       :initializationOptions (:check (:command "clippy"))))))
+      (add-to-list 'eglot-server-programs mode)))
+  (add-hook 'prog-mode-hook
+            (lambda ()
+              (add-hook 'before-save-hook 'eglot-format nil t))))
 
 (use-package eglot-booster
   :ensure nil

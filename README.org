@@ -294,16 +294,32 @@ Clean up the Emacs UI, we don't need or use the toolbar, /etc./
 *** Font configuration
 Define fixed-pitch and variable-pitch fonts to use in the Emacs UI. Variable pitch fonts only work on GUI Emacs, though.
 
+I have multiple devices with different screen resolutions, so we define the font size depending on the hostname we are currently on.
+
+
+#+name: emacs-font-size
+#+begin_src emacs-lisp
+  (let* ((hostname (car (split-string (system-name) "\\." t)))
+         (size-by-hostname '(("deimos" . 9)
+			     ("phobos" . 13)))
+         (default-size 9))
+    (or (cdr (assoc hostname size-by-hostname))
+        default-size))
+#+end_src
+
 #+name: emacs-fonts
 #+begin_src emacs-lisp
-(set-face-attribute 'default nil :font "JBMono Nerd Font" :height 130)
-(set-fontset-font t nil (font-spec :size 20 :name "JBMono Nerd Font"))
-(setq-default line-spacing 0.2)
-(custom-theme-set-faces
- 'user
- '(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height 130))))
- '(fixed-pitch ((t ( :family "JBMono Nerd Font" :height 130)))))
-(add-to-list 'face-font-rescale-alist '("Atkinson Hyperlegible Next" . 1.2))
+  (let* ((font-size
+          <<emacs-font-size>>)
+        (font-height (* font-size 10)))
+    (set-face-attribute 'default nil :font "JBMono Nerd Font" :height font-height)
+    (set-fontset-font t nil (font-spec :size font-size :name "JBMono Nerd Font"))
+    (setq-default line-spacing 0.2)
+    (custom-theme-set-faces
+     'user
+     `(variable-pitch ((t (:family "Atkinson Hyperlegible Next" :height ,font-height))))
+     `(fixed-pitch ((t (:family "JBMono Nerd Font" :height ,font-height))))))
+  (add-to-list 'face-font-rescale-alist '("Atkinson Hyperlegible Next" . 1.2))
 #+end_src
 
 *** Disable splash screen

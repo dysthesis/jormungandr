@@ -123,6 +123,7 @@ EOF
             jormungandr-unwrapped
             jormungandr-eln-cache
             ;
+          default = jormungandr;
         };
 
         apps.default = {
