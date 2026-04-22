@@ -1059,6 +1059,7 @@ And we use LSP booster to speed up RPC between Emacs and the LSP.
 #+begin_src emacs-lisp
   (with-eval-after-load 'eglot
     (dolist (mode '((nix-mode . ("nixd"))
+  		  (typst-ts-mode . ("tinymist"))
                     ((rust-ts-mode rust-mode) . ("rust-analyzer"
   					       :initializationOptions (:check (:command "clippy"))))))
       (add-to-list 'eglot-server-programs mode)))
@@ -1217,7 +1218,9 @@ Magit, but for Jujutsu.
 #+begin_src emacs-lisp
   (use-package lackluster-theme
     :ensure nil
-    :config (load-theme 'lackluster-night t))
+    :config
+    (setq lackluster-theme-pure-black-white t)
+    (load-theme 'lackluster-night t))
   (use-package solaire-mode
     :ensure t
     :after (lackluster-theme)
@@ -1411,4 +1414,11 @@ As its name suggests, this package provides a more modern interface for editing 
       (setq-local buffer-save-without-query t))
     (add-hook 'before-save-hook 'lsp-format-buffer nil t))
 
+#+end_src
+*** Typst
+#+begin_src emacs-lisp
+  (use-package typst-preview
+    :ensure nil)
+	(use-package typst-ts-mode
+	  :ensure nil)
 #+end_src

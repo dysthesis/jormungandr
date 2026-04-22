@@ -736,9 +736,10 @@
   "g j" '(majutsu :wk "Majutsu")))
 
 (use-package lackluster-theme
-  :ensure t
-  :config (load-theme 'lackluster-night t))
-
+  :ensure nil
+  :config
+  (setq lackluster-theme-pure-black-white t)
+  (load-theme 'lackluster-night t))
 (use-package solaire-mode
   :ensure t
   :after (lackluster-theme)
@@ -895,3 +896,9 @@
   (when buffer-file-name
     (setq-local buffer-save-without-query t))
   (add-hook 'before-save-hook 'lsp-format-buffer nil t))
+
+(use-package websocket
+  :ensure t)
+(use-package typst-preview
+  :ensure nil
+  :config (setq typst-preview-browser "xwidget"))

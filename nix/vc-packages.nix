@@ -48,14 +48,20 @@
   packages = {
     eglot-booster = {};
     majutsu = {
-      deps = [
-        p.magit
-        p.magit-section
+      deps = with p; [
+        magit
+        magit-section
       ];
       patches = [./patches/majutsu-compile-time.patch];
     };
     nael = {};
     lackluster-theme = {};
+    typst-ts-mode = {};
+    "typst-preview.el" = {
+      deps = with p; [
+        websocket
+      ];
+    };
   };
 in
   mapAttrsToList
