@@ -1,5 +1,9 @@
 (setq gc-cons-threshold most-positive-fixnum)
 
+(setq-default bidi-display-reordering 'left-to-right
+              bidi-paragraph-direction 'left-to-right)
+(setq bidi-inhibit-bpa t)
+
 (setq byte-compile-warnings '(not obsolete))
 
 (setq warning-suppress-log-types '((comp) (bytecomp)))

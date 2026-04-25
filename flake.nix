@@ -154,6 +154,7 @@
             }))
             deadnix
             alejandra
+            defuddle-cli
           ];
         };
 

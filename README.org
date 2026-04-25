@@ -19,6 +19,13 @@ First, we increase the threshold at which the garbage collector attempts to free
 (setq gc-cons-threshold most-positive-fixnum)
 #+END_SRC
 
+Skip bidirectional text analysis, since this configuration assumes left-to-right text editing. This reduces redisplay work in large buffers.
+#+begin_src emacs-lisp
+(setq-default bidi-display-reordering 'left-to-right
+              bidi-paragraph-direction 'left-to-right)
+(setq bidi-inhibit-bpa t)
+#+end_src
+
 ** Annoyance suppression
 Tell Emacs to suppress superfluous warnings and logs, in order to improve our signal-to-noise ratio.
 
@@ -272,6 +279,7 @@ Use [[https://gitlab.com/koral/gcmh][gcmh]] to manage garbage collection aggress
         <<emacs-suppress-load-average-info>>
         <<emacs-reread-file-on-change>>
         <<emacs-save-minibuffer-history>>
+        <<emacs-save-file-places>>
         <<emacs-ctrl-window-navigation>>
         <<emacs-archaic-defaults>>
         <<emacs-centralise-backup-location>>
@@ -367,7 +375,28 @@ Some systems don't do file notifications well; see https://todo.sr.ht/~ashton314
 *** Save history on minibuffer
 #+name: emacs-save-minibuffer-history
 #+begin_src emacs-lisp
+(setopt savehist-additional-variables
+        '(search-ring regexp-search-ring kill-ring))
+(add-hook 'savehist-save-hook
+          (lambda ()
+            (setq kill-ring
+                  (delq nil
+                        (mapcar (lambda (entry)
+                                  (when (stringp entry)
+                                    (substring-no-properties entry)))
+                                kill-ring)))))
 (savehist-mode)
+#+end_src
+
+*** Save place
+Remember point positions across sessions and recenter after restoring them, so reopened buffers do not put point on the window edge.
+#+name: emacs-save-file-places
+#+begin_src emacs-lisp
+(save-place-mode 1)
+(advice-add 'save-place-find-file-hook :after
+            (lambda (&rest _)
+              (when buffer-file-name
+                (ignore-errors (recenter)))))
 #+end_src
 
 *** Window navigation with CTRL
@@ -376,12 +405,25 @@ Use =CTRL-{arrow}= to navigate through windows, similar to vim-tmux-navigator.
 #+name: emacs-ctrl-window-navigation
 #+begin_src emacs-lisp
 (windmove-default-keybindings 'control)
+(setopt window-combination-resize t)
+(winner-mode +1)
+(defun dysthesis/toggle-delete-other-windows ()
+  "Delete other windows, or restore the previous window configuration."
+  (interactive)
+  (if (and winner-mode
+           (equal (selected-window) (next-window)))
+      (winner-undo)
+    (delete-other-windows)))
+(keymap-global-set "C-x 1" #'dysthesis/toggle-delete-other-windows)
 #+end_src
 
 *** Fix archaic defaults
 #+name: emacs-archaic-defaults
 #+begin_src emacs-lisp
   (setopt sentence-end-double-space nil)
+  (setopt save-interprogram-paste-before-kill t)
+  (setopt kill-do-not-save-duplicates t)
+  (setopt set-mark-command-repeat-pop t)
   ;; Make right-click do something sensible
   (when (display-graphic-p)
     (context-menu-mode))
@@ -419,6 +461,7 @@ For help, see: https://www.masteringemacs.org/article/understanding-minibuffer-c
   (setopt completions-group t)
   (setopt completion-auto-select 'second-tab)            ; Much more eager
   ;(setopt completion-auto-select t)                     ; See `C-h v completion-auto-select' for more possible values
+  (setq ffap-machine-p-known 'reject)                    ; Avoid network pings from `find-file-at-point'
 
   (keymap-set minibuffer-mode-map "TAB" 'minibuffer-complete) ; TAB acts more like how it does in the shell
 
@@ -453,6 +496,10 @@ For help, see: https://www.masteringemacs.org/article/understanding-minibuffer-c
   ;; (setopt tab-width 4)
 
   ;; Misc. UI tweaks
+  (setopt redisplay-skip-fontification-on-input t)
+  (setq-default cursor-in-non-selected-windows nil)
+  (setopt highlight-nonselected-windows nil)
+  (setopt help-window-select t)
   (blink-cursor-mode -1)                                ; Steady cursor
   (pixel-scroll-precision-mode)                         ; Smooth scrolling
 
@@ -484,6 +531,17 @@ For help, see: https://www.masteringemacs.org/article/understanding-minibuffer-c
   (display-time-mode)
 #+end_src
 ** Navigation
+*** Isearch
+Show built-in lazy match counts during incremental search.
+#+begin_src emacs-lisp
+  (use-package isearch
+    :ensure nil
+    :custom
+    (isearch-lazy-count t)
+    (lazy-count-prefix-format "(%s/%s) ")
+    (lazy-count-suffix-format nil))
+#+end_src
+
 *** General
 A package which provides a nicer keybinding definition interface.
 
@@ -802,6 +860,18 @@ Install some community snippets for it.
 #+end_src
 
 ** Editing
+*** Executable scripts
+Automatically make saved scripts executable when they start with a shebang.
+#+begin_src emacs-lisp
+  (add-hook 'after-save-hook #'executable-make-buffer-file-executable-if-script-p)
+#+end_src
+
+*** Regular expressions
+Use normal string regexp syntax in =re-builder= instead of read syntax.
+#+begin_src emacs-lisp
+  (setq reb-re-syntax 'string)
+#+end_src
+
 *** Smartparens
 Automatic delimiter pairing, navigation, and editing.
 #+begin_src emacs-lisp
@@ -999,7 +1069,7 @@ First, we port over some LSP-related optimisations that were made in Doom Emacs.
         (unless +lsp--optimisation-init-p
           (setq +lsp--default-read-process-output-max (default-value 'read-process-output-max)
                 +lsp--default-gcmh-high-cons-threshold (default-value 'gcmh-high-cons-threshold))
-          (setq-default read-process-output-max (* 1024 1024))
+          (setq-default read-process-output-max (* 4 1024 1024))
           ;; REVIEW LSP causes a lot of allocations, with or without the native JSON
           ;;        library, so we up the GC threshold to stave off GC-induced
           ;;        slowdowns/freezes. Doom uses `gcmh' to enforce its GC strategy,
@@ -1030,7 +1100,7 @@ Then, we configure Eglot itself.
 #+end_src
 
 We also want to disable the automatic shutdown of LSP servers. Doing so synchronously on every buffer kill causes noticeable latency when killing buffers (e.g. on =:q=). Disabling this will keep the servers alive even after the termination of the buffers. They can stil be terminated manually, /e.g./ when running =eglot-shutdown-all=.
-#+name: eglot-disable-lsp-autoshudown
+#+name: eglot-disable-lsp-autoshutdown
 #+begin_src emacs-lisp
       (eglot-autoshutdown nil)
 #+end_src

@@ -70,9 +70,37 @@
   (setopt auto-revert-interval 5)
   (setopt auto-revert-check-vc-info t)
   (global-auto-revert-mode)
+  (setopt savehist-additional-variables
+          '(search-ring regexp-search-ring kill-ring))
+  (add-hook 'savehist-save-hook
+            (lambda ()
+              (setq kill-ring
+                    (delq nil
+                          (mapcar (lambda (entry)
+                                    (when (stringp entry)
+                                      (substring-no-properties entry)))
+                                  kill-ring)))))
   (savehist-mode)
+  (save-place-mode 1)
+  (advice-add 'save-place-find-file-hook :after
+              (lambda (&rest _)
+                (when buffer-file-name
+                  (ignore-errors (recenter)))))
   (windmove-default-keybindings 'control)
+  (setopt window-combination-resize t)
+  (winner-mode +1)
+  (defun dysthesis/toggle-delete-other-windows ()
+    "Delete other windows, or restore the previous window configuration."
+    (interactive)
+    (if (and winner-mode
+             (equal (selected-window) (next-window)))
+        (winner-undo)
+      (delete-other-windows)))
+  (keymap-global-set "C-x 1" #'dysthesis/toggle-delete-other-windows)
   (setopt sentence-end-double-space nil)
+  (setopt save-interprogram-paste-before-kill t)
+  (setopt kill-do-not-save-duplicates t)
+  (setopt set-mark-command-repeat-pop t)
   ;; Make right-click do something sensible
   (when (display-graphic-p)
     (context-menu-mode))
@@ -98,6 +126,7 @@
   (setopt completions-group t)
   (setopt completion-auto-select 'second-tab)            ; Much more eager
   ;(setopt completion-auto-select t)                     ; See `C-h v completion-auto-select' for more possible values
+  (setq ffap-machine-p-known 'reject)                    ; Avoid network pings from `find-file-at-point'
   
   (keymap-set minibuffer-mode-map "TAB" 'minibuffer-complete) ; TAB acts more like how it does in the shell
   
@@ -128,6 +157,10 @@
   ;; (setopt tab-width 4)
   
   ;; Misc. UI tweaks
+  (setopt redisplay-skip-fontification-on-input t)
+  (setq-default cursor-in-non-selected-windows nil)
+  (setopt highlight-nonselected-windows nil)
+  (setopt help-window-select t)
   (blink-cursor-mode -1)                                ; Steady cursor
   (pixel-scroll-precision-mode)                         ; Smooth scrolling
   
@@ -153,6 +186,13 @@
   (setopt display-time-format "%a %F %T")
   (setopt display-time-interval 1)
   (display-time-mode))
+
+(use-package isearch
+  :ensure nil
+  :custom
+  (isearch-lazy-count t)
+  (lazy-count-prefix-format "(%s/%s) ")
+  (lazy-count-suffix-format nil))
 
 ;; Define the leader-key macro early so native compilation can expand it
 ;; before any package configs run.
@@ -405,6 +445,10 @@
   :ensure t
   :after tempel)
 
+(add-hook 'after-save-hook #'executable-make-buffer-file-executable-if-script-p)
+
+(setq reb-re-syntax 'string)
+
 (use-package smartparens
 :ensure t
 :hook ((prog-mode text-mode markdown-mode) . smartparens-mode)
@@ -583,7 +627,7 @@
       (unless +lsp--optimisation-init-p
         (setq +lsp--default-read-process-output-max (default-value 'read-process-output-max)
               +lsp--default-gcmh-high-cons-threshold (default-value 'gcmh-high-cons-threshold))
-        (setq-default read-process-output-max (* 1024 1024))
+        (setq-default read-process-output-max (* 4 1024 1024))
         ;; REVIEW LSP causes a lot of allocations, with or without the native JSON
         ;;        library, so we up the GC threshold to stave off GC-induced
         ;;        slowdowns/freezes. Doom uses `gcmh' to enforce its GC strategy,
@@ -603,7 +647,7 @@
 	    (eglot-managed-mode . +lsp-optimisation-mode))
   :custom
   (eglot-auto-display-help-buffer nil)
-  
+  (eglot-autoshutdown nil)
   :config
   (dysthesis/start/leader-keys
    "c" '(:ignore t :which-key "Code")
@@ -808,7 +852,8 @@
 
 (use-package ligature
   :ensure t
-  :hook (prog-mode . ligature-mode)
+  :hook ((prog-mode . ligature-mode)
+	 (typst-ts-mode . ligature-mode))
   :config
   ;; Enable the "www" ligature in every possible major mode
   (ligature-set-ligatures 't '("www"))
@@ -890,7 +935,7 @@
 
   ;; comment to disable rustfmt on save
   (setq rustic-format-on-save t)
-  (add-hook 'rustic-mode-hook 'dysthesisrustic-mode-hook))
+  (add-hook 'rustic-mode-hook 'dysthesis/rustic-mode-hook))
 
 (defun dysthesis/rustic-mode-hook ()
   ;; so that run C-c C-c C-r works without having to confirm, but don't try to
