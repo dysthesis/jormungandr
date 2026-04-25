@@ -1496,3 +1496,15 @@ As its name suggests, this package provides a more modern interface for editing 
 	(use-package typst-ts-mode
 	  :ensure nil)
 #+end_src
+*** Terminal emulator
+Any self-respecting code monkey needs a terminal emulator. =vterm=, =eat=, /etc./ are good choices, but I'm trying out a newer (more experimental?) option, [[https://github.com/dakra/ghostel][ghostel]].
+
+#+begin_src emacs-lisp
+  (use-package ghostel
+    :ensure nil
+    :init
+    (setq ghostel-module-auto-install nil)
+    :config
+    (dysthesis/start/leader-keys
+      "o t" '(ghostel :wk "Open terminal")))
+#+end_src

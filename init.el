@@ -950,3 +950,11 @@
   :ensure nil)
 	(use-package typst-ts-mode
 	  :ensure nil)
+
+(use-package ghostel
+  :ensure nil
+  :init
+  (setq ghostel-module-auto-install nil)
+  :config
+  (dysthesis/start/leader-keys
+    "o t" '(ghostel :wk "Open terminal")))

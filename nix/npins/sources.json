@@ -13,6 +13,22 @@
       "url": "https://github.com/jdtsmith/eglot-booster/archive/cab7803c4f0adc7fff9da6680f90110674bb7a22.tar.gz",
       "hash": "sha256-xUBQrQpw+JZxcqT1fy/8C2tjKwa7sLFHXamBm45Fa4Y="
     },
+    "ghostel": {
+      "type": "GitRelease",
+      "repository": {
+        "type": "GitHub",
+        "owner": "dakra",
+        "repo": "ghostel"
+      },
+      "pre_releases": false,
+      "version_upper_bound": null,
+      "release_prefix": null,
+      "submodules": false,
+      "version": "v0.18.0",
+      "revision": "257386ddb18dc8cecaed351ad00b8943a392717b",
+      "url": "https://api.github.com/repos/dakra/ghostel/tarball/refs/tags/v0.18.0",
+      "hash": "sha256-XlufjW+kgbnKpO7uQFG1aiwG/jIuADBRErLCJcowXGw="
+    },
     "lackluster-theme": {
       "type": "Git",
       "repository": {

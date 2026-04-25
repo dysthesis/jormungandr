@@ -166,7 +166,7 @@
             } ''
               export HOME=$TMPDIR
               export XDG_CONFIG_HOME=$HOME/.config
-              ${self.packages.${system}.jormungandr}/bin/emacs --batch --eval "(message \"ok\")"
+              ${self.packages.${system}.jormungandr}/bin/emacs --batch --eval "(progn (require 'ghostel) (unless (and (fboundp 'ghostel--module-version) (ghostel--module-version)) (error \"ghostel native module missing\")) (message \"ok\"))"
               touch $out
             '';
         };
