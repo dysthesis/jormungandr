@@ -52,6 +52,36 @@
       "revision": "c1d349746731bbff6bf1887c51eb7a1f3bea5c4c",
       "url": "https://codeberg.org/mekeor/nael/archive/c1d349746731bbff6bf1887c51eb7a1f3bea5c4c.tar.gz",
       "hash": "sha256-X3yw0pBgUN71TdPcEPznjq//U5X8P+zctik3nw11RSI="
+    },
+    "typst-preview.el": {
+      "type": "GitRelease",
+      "repository": {
+        "type": "GitHub",
+        "owner": "havarddj",
+        "repo": "typst-preview.el"
+      },
+      "pre_releases": false,
+      "version_upper_bound": null,
+      "release_prefix": null,
+      "submodules": false,
+      "version": "v1.0.0",
+      "revision": "c685857f2d61133fc268509b39796b2718728f29",
+      "url": "https://api.github.com/repos/havarddj/typst-preview.el/tarball/refs/tags/v1.0.0",
+      "hash": "sha256-+426otCa0TASEo9Z+2yH8SUJIGtGEdl35/BdmfBBDbA="
+    },
+    "typst-ts-mode": {
+      "type": "Git",
+      "repository": {
+        "type": "Forgejo",
+        "server": "https://codeberg.org/",
+        "owner": "meow_king",
+        "repo": "typst-ts-mode"
+      },
+      "branch": "main",
+      "submodules": false,
+      "revision": "cf4d5282988068841efd51dc83f99091b41b91dd",
+      "url": "https://codeberg.org/meow_king/typst-ts-mode/archive/cf4d5282988068841efd51dc83f99091b41b91dd.tar.gz",
+      "hash": "sha256-AOL0pIJrPyhBnFPcQHZQjFFvwgRoI+dJ51Kf3oCPplo="
     }
   },
   "version": 7

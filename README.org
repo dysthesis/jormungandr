@@ -1017,7 +1017,8 @@ Then, we configure Eglot itself.
     :defer t
     :hook ((prog-mode . (lambda ()
   		       (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
-  		 (eglot-ensure))))
+  			 (eglot-ensure))))
+  	    (typst-ts-mode . eglot-ensure)
   	    (eglot-managed-mode . +lsp-optimisation-mode))
     :custom
     (eglot-auto-display-help-buffer nil)
@@ -1057,8 +1058,11 @@ And we use LSP booster to speed up RPC between Emacs and the LSP.
 **** Language servers
 #+name: eglot-server-programs
 #+begin_src emacs-lisp
+  (setq-default eglot-workspace-configuration
+                '(:tinymist (:exportPdf "onType")))
   (with-eval-after-load 'eglot
-    (dolist (mode '((nix-mode . ("nixd"))
+    (dolist (mode '((nix-mode . ("nil"))
+  		  (typst-ts-mode . ("tinymist"))
                     ((rust-ts-mode rust-mode) . ("rust-analyzer"
   					       :initializationOptions (:check (:command "clippy"))))))
       (add-to-list 'eglot-server-programs mode)))
@@ -1303,7 +1307,8 @@ Highlight colour codes with the corresponding colour in order to visualise them 
 #+begin_src emacs-lisp
   (use-package ligature
     :ensure t
-    :hook (prog-mode . ligature-mode)
+    :hook ((prog-mode . ligature-mode)
+  	 (typst-ts-mode . ligature-mode))
     :config
     ;; Enable the "www" ligature in every possible major mode
     (ligature-set-ligatures 't '("www"))
@@ -1402,7 +1407,7 @@ As its name suggests, this package provides a more modern interface for editing 
 
     ;; comment to disable rustfmt on save
     (setq rustic-format-on-save t)
-    (add-hook 'rustic-mode-hook 'dysthesisrustic-mode-hook))
+    (add-hook 'rustic-mode-hook 'dysthesis/rustic-mode-hook))
 
   (defun dysthesis/rustic-mode-hook ()
     ;; so that run C-c C-c C-r works without having to confirm, but don't try to
@@ -1413,4 +1418,11 @@ As its name suggests, this package provides a more modern interface for editing 
       (setq-local buffer-save-without-query t))
     (add-hook 'before-save-hook 'lsp-format-buffer nil t))
 
+#+end_src
+*** Typst
+#+begin_src emacs-lisp
+  (use-package typst-preview
+    :ensure nil)
+	(use-package typst-ts-mode
+	  :ensure nil)
 #+end_src

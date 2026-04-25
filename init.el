@@ -598,7 +598,8 @@
   :defer t
   :hook ((prog-mode . (lambda ()
 		       (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
-		 (eglot-ensure))))
+			 (eglot-ensure))))
+	    (typst-ts-mode . eglot-ensure)
 	    (eglot-managed-mode . +lsp-optimisation-mode))
   :custom
   (eglot-auto-display-help-buffer nil)
@@ -609,8 +610,11 @@
    "c <escape>" '(keyboard-escape-quit :which-key t)
    "c r" '(eglot-rename :which-key "Rename")
    "c a" '(eglot-code-actions :which-key "Actions"))
+  (setq-default eglot-workspace-configuration
+                '(:tinymist (:exportPdf "onType")))
   (with-eval-after-load 'eglot
-    (dolist (mode '((nix-mode . ("nixd"))
+    (dolist (mode '((nix-mode . ("nil"))
+  		  (typst-ts-mode . ("tinymist"))
                     ((rust-ts-mode rust-mode) . ("rust-analyzer"
   					       :initializationOptions (:check (:command "clippy"))))))
       (add-to-list 'eglot-server-programs mode)))
@@ -736,9 +740,10 @@
   "g j" '(majutsu :wk "Majutsu")))
 
 (use-package lackluster-theme
-  :ensure t
-  :config (load-theme 'lackluster-night t))
-
+  :ensure nil
+  :config
+  (setq lackluster-theme-pure-black-white t)
+  (load-theme 'lackluster-night t))
 (use-package solaire-mode
   :ensure t
   :after (lackluster-theme)
@@ -895,3 +900,8 @@
   (when buffer-file-name
     (setq-local buffer-save-without-query t))
   (add-hook 'before-save-hook 'lsp-format-buffer nil t))
+
+(use-package typst-preview
+  :ensure nil)
+	(use-package typst-ts-mode
+	  :ensure nil)
