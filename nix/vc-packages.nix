@@ -53,28 +53,12 @@
   ghostelRelease = versionFor "ghostel";
   ghostelVersion = removePrefix "v" ghostelRelease;
   ghostelModuleExt = pkgs.stdenv.hostPlatform.extensions.sharedLibrary;
-  ghostelSystem = pkgs.stdenv.hostPlatform.system;
-  ghostelModulePlatforms = {
-    "x86_64-linux" = "x86_64-linux";
-    "aarch64-linux" = "aarch64-linux";
-    "x86_64-darwin" = "x86_64-macos";
-    "aarch64-darwin" = "aarch64-macos";
-  };
-  ghostelModuleHashes = {
-    "x86_64-linux" = "sha256-42L9Y53DnlEUEo4EAyLvdgQdx8rErn9iaTapfADd8Nw=";
-    "aarch64-linux" = "sha256-Gf6H5f7RsA16TSKLAp97l/j5meOFCpyZzSFiLvm7scQ=";
-    "x86_64-darwin" = "sha256-iSEC1G5D4VybxiaRXlVF5pc++DL2PuID8irF2z4HV6k=";
-    "aarch64-darwin" = "sha256-DMsjRip62u35gOhPPCE0crkdcnZB9UIvyJfNq8FyT3s=";
-  };
-  ghostelModulePlatform =
-    ghostelModulePlatforms.${ghostelSystem}
-    or (builtins.throw "ghostel has no upstream module asset for ${ghostelSystem}");
-  ghostelModuleName = "ghostel-module-${ghostelModulePlatform}${ghostelModuleExt}";
-  ghostelModule = pkgs.fetchurl {
-    url = "https://github.com/dakra/ghostel/releases/download/${ghostelRelease}/${ghostelModuleName}";
-    hash =
-      ghostelModuleHashes.${ghostelSystem}
-      or (builtins.throw "ghostel has no upstream module hash for ${ghostelSystem}");
+  ghostelZigDeps = pkgs.zig_0_15.fetchDeps {
+    pname = "ghostel";
+    version = ghostelVersion;
+    src = ghostelSrc;
+    fetchAll = true;
+    hash = "sha256-ghN/UMACgkFQQEr4nH5gbbJbt/+2bz6tL2bJpbw9mGE=";
   };
 
   ghostel = p.melpaBuild {
@@ -83,8 +67,14 @@
     commit = vcSources.ghostel.revision;
     src = ghostelSrc;
 
+    nativeBuildInputs = [pkgs.zig_0_15];
+
     preBuild = ''
-      install -m755 ${ghostelModule} "ghostel-module${ghostelModuleExt}"
+      export ZIG_GLOBAL_CACHE_DIR="$TMPDIR/zig-cache"
+      mkdir -p "$ZIG_GLOBAL_CACHE_DIR"
+      cp -R ${ghostelZigDeps} "$ZIG_GLOBAL_CACHE_DIR/p"
+      chmod -R u+w "$ZIG_GLOBAL_CACHE_DIR/p"
+      TERM=dumb zig build -Doptimize=ReleaseSafe -Dcpu=baseline
     '';
 
     files = ''(:defaults "etc" "ghostel-module${ghostelModuleExt}")'';
